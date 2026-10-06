@@ -13,8 +13,34 @@ function Contact() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // In a real application, submit this to a backend route (e.g. POST /api/contact)
-    console.log('Form submission data:', formData);
+    
+    const newTicket = {
+      id: 'TCK-' + Date.now().toString().slice(-6),
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      subject: formData.subject,
+      message: formData.message,
+      date: new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' }),
+      status: 'new'
+    };
+
+    try {
+      const existing = JSON.parse(localStorage.getItem('earthy_support_tickets') || '[]');
+      localStorage.setItem('earthy_support_tickets', JSON.stringify([newTicket, ...existing]));
+      window.dispatchEvent(new Event('ticketsUpdated'));
+    } catch (err) {
+      console.error(err);
+    }
+
+    // Attempt backend sync
+    const API = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
+    fetch(`${API}/api/contact`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newTicket)
+    }).catch(() => {});
+
     setSubmitted(true);
     // Clear form
     setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
@@ -72,7 +98,7 @@ function Contact() {
               <div className="channel-icon"><Clock size={20} /></div>
               <div className="channel-details">
                 <h4>Office Hours</h4>
-                <span>Mon - Sat: 11:00 AM - 10:00 PM</span>
+                <span>Mon - Sat: 11:00 AM - 9:00 PM</span>
                 <span>Sunday: Closed (Online WhatsApp active for bookings)</span>
               </div>
             </div>
@@ -90,13 +116,13 @@ function Contact() {
             >
               <CheckCircle size={56} className="success-icon" />
               <h3>Message Sent Successfully!</h3>
-              <p>Thank you for contacting EarthyElectronics. A support agent will review your details and reach out shortly.</p>
+              <p>Thank you for contacting EarthyElectronics. Your message has been routed to our Regal Showroom Support Desk and a specialist will reach out to you shortly.</p>
               <button className="btn btn-primary" onClick={() => setSubmitted(false)}>Send Another Message</button>
             </motion.div>
           ) : (
             <form onSubmit={handleSubmit} className="contact-form">
               <h3>Submit a Support Ticket</h3>
-              <p>Fill out this form and we'll route your request to the appropriate showroom manager.</p>
+              <p>Fill out this form and our Regal showroom support desk will receive your request directly.</p>
 
               <div className="form-grid">
                 <div className="form-group">
@@ -165,7 +191,7 @@ function Contact() {
                   onChange={handleChange}
                   required
                   placeholder="Explain your appliance model query, branch check, or price offer..."
-                  className="input-field"
+                  className="input-field" 
                 ></textarea>
               </div>
 
@@ -178,21 +204,37 @@ function Contact() {
         </main>
       </div>
 
-      {/* Mock Map Section */}
+      {/* Showroom Map Section */}
       <section className="mock-map-section section-padding">
         <div className="glass-panel text-center map-box">
-          <MapPin size={32} className="map-icon" />
-          <h3>Visit Our Showroom in Saddar</h3>
-          <p>We are centrally located in Karachi's prime shopping areas with dedicated valet parking slots.</p>
-          <div className="map-placeholder-media">
-            {/* Simple styling to simulate a maps card */}
-            <div className="map-point">
-              <h4>📍 Saddar Main Branch</h4>
-              <p>Shop #12, beauty house, Saddar near regal market, saddar karachi.</p>
-            </div>
-            <div className="map-point">
-              <h4>📍 DHA Phase 6 Branch</h4>
-              <p>Bukhari Commercial Area, Phase 6, DHA, Karachi</p>
+          <MapPin size={36} className="map-icon" style={{ color: '#065f46' }} />
+          <h3>Visit Our Regal Market Showroom</h3>
+          <p>We are centrally located in Karachi's prime electronics hub with easy accessibility.</p>
+          <div className="map-placeholder-media" style={{ display: 'flex', justifyContent: 'center' }}>
+            <div className="map-point" style={{ maxWidth: '580px', width: '100%', textAlign: 'left', padding: '24px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <MapPin size={22} color="#10b981" />
+                <h4 style={{ margin: 0, fontSize: '18px', color: '#065f46' }}>Regal Market Flagship Showroom</h4>
+              </div>
+              <p style={{ margin: '6px 0', fontSize: '14px', color: '#334155', fontWeight: '500' }}>
+                Shop #12, Beauty House, Near Regal Market, Saddar, Karachi.
+              </p>
+              <div style={{ marginTop: '14px', display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '13px', color: '#64748b' }}>
+                <span>📞 <strong>0300-2347457</strong></span>
+                <span>⏰ <strong>Mon - Sat: 11:00 AM - 9:00 PM</strong></span>
+                <span>📍 <strong>Landmark: Regal Chowk, Saddar</strong></span>
+              </div>
+              <div style={{ marginTop: '16px' }}>
+                <a 
+                  href="https://maps.google.com/?q=Regal+Market+Saddar+Karachi" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="btn btn-outline"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', fontSize: '13px', textDecoration: 'none' }}
+                >
+                  <MapPin size={14} /> Open in Google Maps
+                </a>
+              </div>
             </div>
           </div>
         </div>

@@ -158,7 +158,7 @@
       "category": "Air Conditioners",
       "price": 18115,
       "discountPrice": 17028,
-      "image": "https://gulfelectronics.pk/wp-content/uploads/2025/07/ye-mujhe-white-background-main-share-karoo-2026-03-05T131249.436.jpg",
+      "image": "/images/ecostar-ecostar-emperor-duke-1-5-ton-w.png",
       "description": "Official EcoStar EcoStar Emperor Cool Series ES-18EMC1WS 1.5 Ton Split AC with official warranty.",
       "specifications": {},
       "stock": 100,
@@ -413,7 +413,7 @@
       "category": "Air Conditioners",
       "price": 138000,
       "discountPrice": 126000,
-      "image": "https://hadielectronics.com.pk/wp-content/uploads/2026/02/GS-18FITH1W.webp",
+      "image": "/images/gree-gree-1-5-ton-gs-18-pith11g-grey-pular-series-inverter.png",
       "description": "Gree 1.5 Ton Fairy Series Inverter AC with T3 Tropicalized Compressor.",
       "specifications": {},
       "stock": 100,
@@ -443,7 +443,7 @@
       "category": "Air Conditioners",
       "price": 131087,
       "discountPrice": 123222,
-      "image": "https://ittefaqsay.com/wp-content/uploads/2026/02/Haier-1.5-Ton-DC-Inverter-AC-HSU-19LF.webp",
+      "image": "/images/haier-haier-1-5-ton-dc-inverter-ac-19lf-supreme.png",
       "description": "Official Haier Haier 1.5 Ton DC Inverter AC 19LF Supreme with official warranty.",
       "specifications": {},
       "stock": 100,
@@ -728,7 +728,7 @@
       "category": "Air Conditioners",
       "price": 45000,
       "discountPrice": 42300,
-      "image": "217\"",
+      "image": "/images/orient-orient-1-ton-12g-lunar-grace-golden.png",
       "description": "Official Orient Orient 1 Ton 12G Lunar Grace Golden with official warranty.",
       "specifications": {},
       "stock": 100,
@@ -1763,7 +1763,7 @@
       "category": "LED TVs",
       "price": 184500,
       "discountPrice": 173430,
-      "image": "https://th.bing.com/th/id/OIP.cil48jhFbKBewyozIaN0kAHaHa?w=181&h=182&c=7&r=0&o=7&pid=1.7&rm=3",
+      "image": "/images/tcl-tcl-50-s51k-qled-tv-for-karachi-only.png",
       "description": "Official TCL TCL 55 P8K with official warranty.",
       "specifications": {},
       "stock": 100,
@@ -2770,7 +2770,7 @@
       "discountPrice": 110000,
       "stock": 100,
       "stock_threshold": 5,
-      "image": "https://images.priceoye.pk/dawlance-refrigerator-91999-avante-plus-pakistan-priceoye-3n2y9.jpg"
+      "image": "/images/dawlance-dw-260-lvs-golden.png"
     },
     {
       "id": 1002,
@@ -2781,7 +2781,7 @@
       "discountPrice": 125000,
       "stock": 100,
       "stock_threshold": 5,
-      "image": "https://images.priceoye.pk/haier-refrigerator-hrf-398-if-pakistan-priceoye-v2xqp.jpg"
+      "image": "/images/product_fridge_2.png"
     },
     {
       "id": 1003,
@@ -2792,7 +2792,7 @@
       "discountPrice": 90000,
       "stock": 100,
       "stock_threshold": 5,
-      "image": "https://images.priceoye.pk/pel-refrigerator-glass-door-prgd-21950-pakistan-priceoye-g2g9y.jpg"
+      "image": "/images/orient_grand_refrigerator.png"
     },
     {
       "id": 1004,
@@ -2803,7 +2803,7 @@
       "discountPrice": 199000,
       "stock": 100,
       "stock_threshold": 5,
-      "image": "https://images.priceoye.pk/samsung-refrigerator-rt28t3722s8-pakistan-priceoye-b4m2o.jpg"
+      "image": "/images/product_fridge.png"
     },
     {
       "id": 2001,
@@ -2814,7 +2814,7 @@
       "discountPrice": 42000,
       "stock": 100,
       "stock_threshold": 5,
-      "image": "https://images.priceoye.pk/dawlance-top-load-washing-machine-dwt-255-pakistan-priceoye-6p7qz.jpg"
+      "image": "/images/dawlance-dawlance-top-load-fully-automatic-washing-machine-8-5kg-dwt-9560.png"
     },
     {
       "id": 2002,
@@ -2825,7 +2825,7 @@
       "discountPrice": 52000,
       "stock": 100,
       "stock_threshold": 5,
-      "image": "https://images.priceoye.pk/haier-top-load-washing-machine-hwm-120-826-pakistan-priceoye-9b2f6.jpg"
+      "image": "/images/haier-haier-top-load-fully-automatic-washing-machine-12-kg-hwm-120-826-gt.png"
     },
     {
       "id": 2003,
@@ -2836,7 +2836,7 @@
       "discountPrice": 24000,
       "stock": 100,
       "stock_threshold": 5,
-      "image": "https://images.priceoye.pk/pel-twin-tub-washing-machine-pwm-900-pakistan-priceoye-5c3a1.jpg"
+      "image": "/images/dawlance-dawlance-twin-tub-washing-machine-dw-6550c.png"
     }
   ]
 }

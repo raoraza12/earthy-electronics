@@ -40,8 +40,8 @@ function About() {
             <p>Happy Customers</p>
           </div>
           <div className="stat-card glass-panel" data-aos="fade-up" data-aos-delay="200">
-            <h3 className="text-gradient">2</h3>
-            <p>Karachi Showrooms</p>
+            <h3 className="text-gradient">1</h3>
+            <p>Regal Showroom</p>
           </div>
           <div className="stat-card glass-panel" data-aos="fade-up" data-aos-delay="300">
             <h3 className="text-gradient">100%</h3>
@@ -77,20 +77,20 @@ function About() {
         </div>
       </section>
 
-      {/* 4. Showrooms Section */}
+      {/* 4. Showroom Section */}
       <section className="showrooms-section section-padding">
         <div className="container">
           <div className="section-header text-center">
-            <h2>Our Retail Showrooms</h2>
+            <h2>Our Retail Showroom</h2>
             <p>Visit us in person to view live product demos and discuss specifications with our technical staff.</p>
           </div>
-          <div className="showrooms-grid">
-            <div className="showroom-card glass-panel" data-aos="fade-right">
+          <div className="showrooms-grid" style={{ display: 'flex', justifyContent: 'center' }}>
+            <div className="showroom-card glass-panel" data-aos="fade-up" style={{ maxWidth: '580px', width: '100%' }}>
               <div className="showroom-header">
                 <MapPin className="showroom-icon" />
-                <h3>Saddar Main Branch</h3>
+                <h3>Regal Market Flagship Showroom</h3>
               </div>
-              <p className="showroom-address">Shop #12, beauty house, Saddar near regal market, saddar karachi.</p>
+              <p className="showroom-address">Shop #12, Beauty House, Saddar Near Regal Market, Saddar, Karachi.</p>
               <div className="showroom-details">
                 <div className="detail-line">
                   <Clock size={16} />
@@ -98,25 +98,7 @@ function About() {
                 </div>
                 <div className="detail-line">
                   <Calendar size={16} />
-                  <span>Sunday: Closed</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="showroom-card glass-panel">
-              <div className="showroom-header">
-                <MapPin className="showroom-icon" />
-                <h3>DHA Phase 6 Branch</h3>
-              </div>
-              <p className="showroom-address">Main Bukhari Commercial Area, Phase 6, DHA, Karachi</p>
-              <div className="showroom-details">
-                <div className="detail-line">
-                  <Clock size={16} />
-                  <span>Mon - Sat: 12:00 PM - 10:00 PM</span>
-                </div>
-                <div className="detail-line">
-                  <Calendar size={16} />
-                  <span>Sunday: Closed</span>
+                  <span>Sunday: Closed (Online Orders Active)</span>
                 </div>
               </div>
             </div>

@@ -12,7 +12,7 @@ import {
   LayoutDashboard, Package, ShoppingCart, Users, TrendingUp,
   CreditCard, LogOut, Menu, X, Bell, Settings, Plus, Pencil,
   Trash2, AlertTriangle, Star, Zap, Banknote, Ticket, Image as ImageIcon, MapPin, Clock,
-  ChevronDown, Check, Store
+  ChevronDown, Check, Store, MessageSquare, Phone, Mail
 } from 'lucide-react';
 import './Admin.css';
 
@@ -133,6 +133,53 @@ export default function AdminDashboard() {
     });
   };
 
+  // Customer Support Inquiries / Tickets State
+  const [supportTickets, setSupportTickets] = useState(() => {
+    try {
+      const saved = localStorage.getItem('earthy_support_tickets');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [
+      {
+        id: 'TCK-948102',
+        name: 'Muhammad Tariq',
+        email: 'tariq.pk@gmail.com',
+        phone: '0301-4458921',
+        subject: 'Haier 1.5 Ton T3 AC Delivery Inquiry',
+        message: 'Assalam-o-Alaikum, is the Haier 1.5 Ton T3 Pro Inverter AC currently in stock at Regal Market showroom for same-day delivery?',
+        date: '2026-10-06 04:30 PM',
+        status: 'new'
+      },
+      {
+        id: 'TCK-882319',
+        name: 'Adeel Khan',
+        email: 'adeel.khan88@yahoo.com',
+        phone: '0321-9876543',
+        subject: 'Installment Plan for Dawlance Refrigerator',
+        message: 'Can I purchase the Dawlance 91996 inverter refrigerator on 12-month installments? What documents are required?',
+        date: '2026-10-05 07:15 PM',
+        status: 'resolved'
+      }
+    ];
+  });
+
+  const handleResolveTicket = (id) => {
+    setSupportTickets(prev => {
+      const updated = prev.map(t => t.id === id ? { ...t, status: t.status === 'resolved' ? 'new' : 'resolved' } : t);
+      localStorage.setItem('earthy_support_tickets', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleDeleteTicket = (id) => {
+    if (!confirm('Are you sure you want to delete this customer inquiry?')) return;
+    setSupportTickets(prev => {
+      const updated = prev.filter(t => t.id !== id);
+      localStorage.setItem('earthy_support_tickets', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const token = localStorage.getItem('token');
 
@@ -147,10 +194,25 @@ export default function AdminDashboard() {
     fetch(url, { ...opts, headers: { ...opts.headers, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } });
 
   useEffect(() => {
+    const handleReloadTickets = () => {
+      try {
+        const saved = localStorage.getItem('earthy_support_tickets');
+        if (saved) setSupportTickets(JSON.parse(saved));
+      } catch {}
+    };
+    window.addEventListener('ticketsUpdated', handleReloadTickets);
+    window.addEventListener('storage', handleReloadTickets);
+    return () => {
+      window.removeEventListener('ticketsUpdated', handleReloadTickets);
+      window.removeEventListener('storage', handleReloadTickets);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!token) return;
     
-    // Demo bypass for locations
-    setLocations([{ id: 1, name: 'Karachi Central' }, { id: 2, name: 'Lahore Branch' }]);
+    // Flagship showroom location
+    setLocations([{ id: 1, name: 'Regal Market Flagship Showroom, Saddar, Karachi' }]);
 
     setLoading(false);
 
@@ -223,6 +285,7 @@ export default function AdminDashboard() {
     { id: 'users',        icon: <Users size={18} color="#fb923c"/>,            label: 'Customers' },
     { id: 'coupons',      icon: <Ticket size={18} color="#f43f5e"/>,           label: 'Promo Codes' },
     { id: 'reviews',      icon: <Star size={18} color="#facc15"/>,             label: 'Reviews' },
+    { id: 'inquiries',    icon: <MessageSquare size={18} color="#06b6d4"/>,    label: 'Inquiries' },
     { id: 'banners',      icon: <ImageIcon size={18} color="#c084fc"/>,        label: 'Banners' },
     { id: 'site-settings',icon: <Settings size={18} color="#94a3b8"/>,         label: 'Site Editor' },
   ];
@@ -1074,6 +1137,112 @@ export default function AdminDashboard() {
                       </table>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* 📩 CUSTOMER SUPPORT INQUIRIES / TICKETS VIEW 📩 */}
+              {activeView === 'inquiries' && (
+                <div>
+                  <div className="admin-view-header">
+                    <div>
+                      <h3>Customer Support Inquiries</h3>
+                      <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '14px' }}>
+                        Messages and problem tickets submitted by customers through the Contact Us form.
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <span style={{ background: '#ecfdf5', color: '#065f46', padding: '6px 14px', borderRadius: '20px', fontWeight: '700', fontSize: '13px' }}>
+                        {supportTickets.length} Total Tickets
+                      </span>
+                    </div>
+                  </div>
+
+                  {supportTickets.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '60px 20px', background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                      <MessageSquare size={48} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
+                      <h4 style={{ margin: '0 0 6px', color: '#334155' }}>No Support Tickets</h4>
+                      <p style={{ margin: 0, color: '#94a3b8', fontSize: '14px' }}>Customer inquiries submitted via the Contact form will appear here in real-time.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {supportTickets.map(ticket => (
+                        <div 
+                          key={ticket.id} 
+                          style={{ 
+                            background: '#ffffff', 
+                            border: ticket.status === 'new' ? '1.5px solid #10b981' : '1px solid #e2e8f0', 
+                            borderRadius: '14px', 
+                            padding: '20px', 
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                            position: 'relative'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <span style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', background: '#f1f5f9', padding: '2px 8px', borderRadius: '6px' }}>{ticket.id}</span>
+                                <h4 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>{ticket.subject}</h4>
+                                {ticket.status === 'new' ? (
+                                  <span style={{ fontSize: '11px', fontWeight: '700', background: '#ecfdf5', color: '#059669', padding: '2px 8px', borderRadius: '10px' }}>● NEW</span>
+                                ) : (
+                                  <span style={{ fontSize: '11px', fontWeight: '700', background: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: '10px' }}>RESOLVED</span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                                Received on: <strong>{ticket.date}</strong>
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              {ticket.phone && (
+                                <a 
+                                  href={`https://wa.me/${ticket.phone.replace(/[^0-9]/g, '')}?text=Assalam-o-Alaikum%20${encodeURIComponent(ticket.name)},%20EarthyElectronics%20Regal%20Market%20Showroom%20se%20rabta%20kiya%20ja%20raha%20hai%20regarding:%20${encodeURIComponent(ticket.subject)}`} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 12px', background: '#25d366', color: 'white', borderRadius: '8px', fontSize: '12px', fontWeight: '600', textDecoration: 'none' }}
+                                  title="Reply on WhatsApp"
+                                >
+                                  <MessageSquare size={14} /> WhatsApp Reply
+                                </a>
+                              )}
+                              <a 
+                                href={`mailto:${ticket.email}?subject=Re:%20${encodeURIComponent(ticket.subject)}`}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 12px', background: '#f1f5f9', color: '#334155', borderRadius: '8px', fontSize: '12px', fontWeight: '600', textDecoration: 'none', border: '1px solid #cbd5e1' }}
+                                title="Reply via Email"
+                              >
+                                <Mail size={14} /> Email
+                              </a>
+                              <button 
+                                onClick={() => handleResolveTicket(ticket.id)}
+                                style={{ padding: '7px 12px', background: ticket.status === 'new' ? '#f0fdf4' : '#f8fafc', color: ticket.status === 'new' ? '#166534' : '#64748b', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
+                              >
+                                {ticket.status === 'new' ? 'Mark Resolved' : 'Reopen'}
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteTicket(ticket.id)}
+                                style={{ padding: '7px 10px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+                                title="Delete inquiry"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Customer Details Box */}
+                          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', padding: '10px 14px', background: '#f8fafc', borderRadius: '8px', fontSize: '13px', color: '#475569', marginBottom: '12px' }}>
+                            <div>👤 <strong>Customer:</strong> {ticket.name}</div>
+                            <div>✉️ <strong>Email:</strong> <a href={`mailto:${ticket.email}`} style={{ color: '#0284c7', textDecoration: 'none' }}>{ticket.email}</a></div>
+                            {ticket.phone && <div>📞 <strong>Phone:</strong> <a href={`tel:${ticket.phone}`} style={{ color: '#0284c7', textDecoration: 'none' }}>{ticket.phone}</a></div>}
+                          </div>
+
+                          {/* Problem / Message Body */}
+                          <div style={{ background: '#fbfcf8', borderLeft: '4px solid #10b981', padding: '12px 16px', borderRadius: '0 8px 8px 0', fontSize: '14px', color: '#1e293b', lineHeight: '1.6' }}>
+                            "{ticket.message}"
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 

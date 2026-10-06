@@ -1,0 +1,110 @@
+[
+  {
+    "id": 471,
+    "name": "EcoStar Emperor Cool Series ES-18EMC1WS 1.5 Ton Split AC",
+    "brand": "EcoStar",
+    "category": "Air Conditioners",
+    "price": 17028,
+    "image": "https://gulfelectronics.pk/wp-content/uploads/2025/07/ye-mujhe-white-background-main-share-karoo-2026-03-05T131249.436.jpg",
+    "reason": "HTTP 404"
+  },
+  {
+    "id": 447,
+    "name": "Gree GS-18FITH1W 1.5 Ton Inverter Split AC",
+    "brand": "Gree",
+    "category": "Air Conditioners",
+    "price": 126000,
+    "image": "https://hadielectronics.com.pk/wp-content/uploads/2026/02/GS-18FITH1W.webp",
+    "reason": "HTTP 404"
+  },
+  {
+    "id": 507,
+    "name": "Haier 1.5 Ton DC Inverter AC 19LF Supreme",
+    "brand": "Haier",
+    "category": "Air Conditioners",
+    "price": 123222,
+    "image": "https://ittefaqsay.com/wp-content/uploads/2026/02/Haier-1.5-Ton-DC-Inverter-AC-HSU-19LF.webp",
+    "reason": "HTTP 403"
+  },
+  {
+    "id": 465,
+    "name": "Orient 1 Ton 12G Lunar Grace Golden",
+    "brand": "Orient",
+    "category": "Air Conditioners",
+    "price": 42300,
+    "image": "217\"",
+    "reason": "Invalid protocol"
+  },
+  {
+    "id": 760,
+    "name": "TCL 55 P8K",
+    "brand": "TCL",
+    "category": "LED TVs",
+    "price": 173430,
+    "image": "https://th.bing.com/th/id/OIP.cil48jhFbKBewyozIaN0kAHaHa?w=181&h=182&c=7&r=0&o=7&pid=1.7&rm=3",
+    "reason": "HTTP 404"
+  },
+  {
+    "id": 1001,
+    "name": "Dawlance 91999 Avante Refrigerator",
+    "brand": "Dawlance",
+    "category": "Refrigerators",
+    "price": 110000,
+    "image": "https://images.priceoye.pk/dawlance-refrigerator-91999-avante-plus-pakistan-priceoye-3n2y9.jpg",
+    "reason": "HTTP 403"
+  },
+  {
+    "id": 1002,
+    "name": "Haier HRF-398 Refrigerator",
+    "brand": "Haier",
+    "category": "Refrigerators",
+    "price": 125000,
+    "image": "https://images.priceoye.pk/haier-refrigerator-hrf-398-if-pakistan-priceoye-v2xqp.jpg",
+    "reason": "HTTP 403"
+  },
+  {
+    "id": 1003,
+    "name": "PEL 21950 Glass Door Refrigerator",
+    "brand": "PEL",
+    "category": "Refrigerators",
+    "price": 90000,
+    "image": "https://images.priceoye.pk/pel-refrigerator-glass-door-prgd-21950-pakistan-priceoye-g2g9y.jpg",
+    "reason": "HTTP 403"
+  },
+  {
+    "id": 1004,
+    "name": "Samsung RT28 Double Door Fridge",
+    "brand": "Samsung",
+    "category": "Refrigerators",
+    "price": 199000,
+    "image": "https://images.priceoye.pk/samsung-refrigerator-rt28t3722s8-pakistan-priceoye-b4m2o.jpg",
+    "reason": "HTTP 403"
+  },
+  {
+    "id": 2001,
+    "name": "Dawlance DWT 255 Washing Machine",
+    "brand": "Dawlance",
+    "category": "Washing Machines",
+    "price": 42000,
+    "image": "https://images.priceoye.pk/dawlance-top-load-washing-machine-dwt-255-pakistan-priceoye-6p7qz.jpg",
+    "reason": "HTTP 403"
+  },
+  {
+    "id": 2002,
+    "name": "Haier HWM 120-826 Top Load",
+    "brand": "Haier",
+    "category": "Washing Machines",
+    "price": 52000,
+    "image": "https://images.priceoye.pk/haier-top-load-washing-machine-hwm-120-826-pakistan-priceoye-9b2f6.jpg",
+    "reason": "HTTP 403"
+  },
+  {
+    "id": 2003,
+    "name": "PEL PWM 900 Twin Tub",
+    "brand": "PEL",
+    "category": "Washing Machines",
+    "price": 24000,
+    "image": "https://images.priceoye.pk/pel-twin-tub-washing-machine-pwm-900-pakistan-priceoye-5c3a1.jpg",
+    "reason": "HTTP 403"
+  }
+]
