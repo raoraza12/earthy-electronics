@@ -105,7 +105,7 @@ export default function ProductModal({ group, initialVariant, onClose }) {
     // In our app, opening cart drawer handles checkout, or we can navigate to a checkout page.
     // Assuming cart sidebar is accessible or we dispatch a custom event.
     // For now we'll just add it and trigger cart open via standard means.
-    window.dispatchEvent(new CustomEvent('open-cart'));
+    window.dispatchEvent(new CustomEvent('open-cart', { detail: { checkout: true } }));
   };
 
   if (!group || !currentVariant) return null;
@@ -205,7 +205,7 @@ export default function ProductModal({ group, initialVariant, onClose }) {
                   <ShoppingCart size={18}/> Add to Cart
                 </button>
                 <a
-                  href={`whatsapp://send?phone=923002347457&text=I want to order: ${encodeURIComponent(currentVariant.name)}`}
+                  href={`https://wa.me/923002347457?text=${encodeURIComponent(`I want to order: ${currentVariant.name}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-green m-btn-large"

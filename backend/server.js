@@ -154,6 +154,7 @@ async function initDB() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INT,
       customer_name VARCHAR(255),
+      customer_email VARCHAR(255),
       total DOUBLE NOT NULL,
       status VARCHAR(50) DEFAULT 'pending',
       shipping_address TEXT,
@@ -161,6 +162,10 @@ async function initDB() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
     )`);
+
+    try {
+      await db.query(`ALTER TABLE orders ADD COLUMN customer_email VARCHAR(255)`);
+    } catch {}
 
     // Order items
     await db.query(`CREATE TABLE IF NOT EXISTS order_items (
@@ -567,15 +572,38 @@ app.post('/api/user/location', authMiddleware, async (req, res) => {
 
 // ─── Orders API ─────────────────────────────────────────────────
 app.post('/api/orders', async (req, res) => {
-  const { userId, customerName, phone, address, total, items } = req.body;
-  if (!customerName || !phone || !address || !items || items.length === 0) {
-    return res.status(400).json({ status: 'error', message: 'Missing required fields' });
+  const customerName = (req.body.customerName || req.body.customer_name || '').trim();
+  const customerEmail = (req.body.customerEmail || req.body.customer_email || req.body.email || req.body.user_email || '').trim().toLowerCase();
+  const phone = (req.body.phone || req.body.customer_phone || '').trim();
+  const address = (req.body.address || req.body.customer_address || req.body.shipping_address || '').trim();
+  const total = Number(req.body.total) || 0;
+  const items = req.body.items || [];
+  const userId = req.body.userId || req.body.user_id || 0;
+
+  // Strict validation for required and compulsory fields
+  if (!customerName || !customerEmail || !phone || !address || !items || items.length === 0) {
+    return res.status(400).json({ 
+      status: 'error', 
+      message: 'All fields are compulsory: Name, valid Email, valid Phone number, and Address are required.' 
+    });
+  }
+
+  // Strict email validation
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(customerEmail)) {
+    return res.status(400).json({ status: 'error', message: 'Invalid email address provided.' });
+  }
+
+  // Strict phone validation
+  const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
+  if (!/^\+?[0-9]{10,15}$/.test(cleanPhone)) {
+    return res.status(400).json({ status: 'error', message: 'Invalid phone number provided. Must be at least 10-15 digits.' });
   }
 
   try {
     const result = await dbRun(
-      'INSERT INTO orders (user_id, customer_name, total, shipping_address, phone) VALUES (?, ?, ?, ?, ?)',
-      [userId || 0, customerName, total, address, phone]
+      'INSERT INTO orders (user_id, customer_name, customer_email, total, shipping_address, phone) VALUES (?, ?, ?, ?, ?, ?)',
+      [userId, customerName, customerEmail, total, address, phone]
     );
     const orderId = result.lastID;
 
@@ -583,11 +611,21 @@ app.post('/api/orders', async (req, res) => {
     for (const item of items) {
       await dbRun(
         'INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)',
-        [orderId, item.id, item.quantity, item.discountPrice || item.price]
+        [orderId, item.id || 0, item.quantity || 1, item.discountPrice || item.price || 0]
       );
     }
 
     res.status(201).json({ status: 'success', message: 'Order placed successfully', orderId });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
+// Admin: View all orders
+app.get('/api/admin/orders', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const orders = await dbAll('SELECT * FROM orders ORDER BY created_at DESC');
+    res.json({ status: 'success', data: orders });
   } catch (err) {
     res.status(500).json({ status: 'error', message: err.message });
   }

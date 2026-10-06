@@ -6,7 +6,7 @@ import { useInventory } from '../context/InventoryContext';
 import './Products.css';
 
 
-const ProductCardItem = ({ group, checkAuth, addToCart, handleSelectProduct, catFallback, idx, compareList, toggleCompare }) => {
+const ProductCardItem = ({ group, addToCart, handleSelectProduct, catFallback, idx, compareList, toggleCompare }) => {
   const [selectedVariant, setSelectedVariant] = useState(group.variants[0]);
   
   useEffect(() => {
@@ -66,10 +66,8 @@ const ProductCardItem = ({ group, checkAuth, addToCart, handleSelectProduct, cat
         <div className="catalog-actions">
           <button className="btn btn-navy catalog-cart-btn" style={{ padding: '8px 10px', fontSize: '12px' }} onClick={(e) => {
             e.stopPropagation();
-            if (checkAuth()) {
-              addToCart(selectedVariant);
-              alert('Added to cart!');
-            }
+            addToCart(selectedVariant);
+            alert('Added to cart!');
           }}>
             <ShoppingCart size={14}/> Add to Cart
           </button>
@@ -78,10 +76,8 @@ const ProductCardItem = ({ group, checkAuth, addToCart, handleSelectProduct, cat
             style={{ padding: '8px 10px', fontSize: '12px' }}
             onClick={(e) => {
               e.stopPropagation();
-              if (checkAuth()) {
-                addToCart(selectedVariant);
-                window.dispatchEvent(new CustomEvent('open-cart'));
-              }
+              addToCart(selectedVariant);
+              window.dispatchEvent(new CustomEvent('open-cart', { detail: { checkout: true } }));
             }}
           >
             Order Now
@@ -103,18 +99,6 @@ export default function Products() {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [initialVariant, setInitialVariant] = useState(null);
   
-  // Auth check for cart
-  const checkAuth = () => {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    if (!token || !user) {
-      alert("Please login first to place an order or add to cart.");
-      window.location.href = '/signin';
-      return false;
-    }
-    return true;
-  };
-
   const handleSelectProduct = (group, variant) => {
     navigate('/product/' + variant.id);
   };
@@ -534,7 +518,6 @@ export default function Products() {
                     <ProductCardItem 
                       key={group.id} 
                       group={group} 
-                      checkAuth={checkAuth} 
                       addToCart={addToCart} 
                       handleSelectProduct={handleSelectProduct} 
                       catFallback={catFallback}
@@ -626,7 +609,8 @@ export default function Products() {
                     {compareList.map(p => (
                       <td key={p.id}>
                         <button className="btn btn-navy" style={{ padding: '8px 16px', fontSize: '13px' }} onClick={() => {
-                          if(checkAuth()) { addToCart(p.selectedVariant); alert('Added to cart!'); }
+                          addToCart(p.selectedVariant);
+                          alert('Added to cart!');
                         }}>
                           <ShoppingCart size={14}/> Add to Cart
                         </button>

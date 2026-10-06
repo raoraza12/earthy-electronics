@@ -36,3 +36,4 @@ dist/
 database.sqlite
 earthyelec.db
 *.env*
+.env*

@@ -13,10 +13,12 @@ import SignUp from './pages/SignUp';
 import AdminLogin from './pages/AdminLogin';
 import Admin from './pages/Admin';
 import CustomerDashboard from './pages/CustomerDashboard';
+import Checkout from './pages/Checkout';
 import NotFound from './pages/NotFound';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Chatbot from './components/Chatbot';
+import FloatingWhatsApp from './components/FloatingWhatsApp';
 
 // Security: Robust frontend route protection to prevent unauthorized component rendering
 const ProtectedRoute = ({ children, requiredRole }) => {
@@ -24,11 +26,47 @@ const ProtectedRoute = ({ children, requiredRole }) => {
   const user = JSON.parse(localStorage.getItem('user') || 'null');
   
   if (!token || !user || (requiredRole && user.role !== requiredRole)) {
-    return <Navigate to={requiredRole === 'admin' ? '/admin-login' : '/signin'} replace />;
+    return <Navigate to={requiredRole === 'admin' ? '/abid' : '/signin'} replace />;
   }
   
   return children;
 };
+
+// Z+ Security: Secret Admin Gateway - accessible strictly via secret slug /abid
+function SecretAdminGateway() {
+  const [auth, setAuth] = useState(() => {
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    return { token, isAdmin: user?.role === 'admin' };
+  });
+
+  useEffect(() => {
+    const checkAuth = () => {
+      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user') || 'null');
+      setAuth({ token, isAdmin: user?.role === 'admin' });
+    };
+    window.addEventListener('authChange', checkAuth);
+    window.addEventListener('storage', checkAuth);
+    return () => {
+      window.removeEventListener('authChange', checkAuth);
+      window.removeEventListener('storage', checkAuth);
+    };
+  }, []);
+
+  if (auth.token && auth.isAdmin) {
+    return <Admin />;
+  }
+  return (
+    <AdminLogin 
+      onSuccess={() => {
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || 'null');
+        setAuth({ token, isAdmin: user?.role === 'admin' });
+      }} 
+    />
+  );
+}
 
 function LocationTracker() {
   useEffect(() => {
@@ -39,25 +77,28 @@ function LocationTracker() {
     if (!user || user.role !== 'customer') return;
 
     let watchId;
-    if ('geolocation' in navigator) {
-      watchId = navigator.geolocation.watchPosition((position) => {
-        const { latitude, longitude } = position.coords;
-        const API = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
-        fetch(`${API}/api/user/location`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ lat: latitude, lng: longitude })
-        }).catch(err => console.error('Location sync failed:', err));
-      }, (error) => {
-        console.error('Geolocation error:', error);
-      }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+    // Check permission first to avoid intrusive prompt popups
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'geolocation' }).then(result => {
+        if (result.state === 'granted' && 'geolocation' in navigator) {
+          watchId = navigator.geolocation.watchPosition((position) => {
+            const { latitude, longitude } = position.coords;
+            const API = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
+            fetch(`${API}/api/user/location`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ lat: latitude, lng: longitude })
+            }).catch(() => {});
+          }, () => {}, { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 });
+        }
+      }).catch(() => {});
     }
-    
+
     return () => {
-      if (watchId) navigator.geolocation.clearWatch(watchId);
+      if (watchId && navigator.geolocation) navigator.geolocation.clearWatch(watchId);
     };
   }, []);
   return null;
@@ -81,7 +122,7 @@ function AnalyticsTracker() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ page_url: location.pathname, session_id: sessionId })
-    }).catch(console.error);
+    }).catch(() => {});
   }, [location.pathname, sessionId, API]);
 
   // Track Session Time
@@ -93,7 +134,7 @@ function AnalyticsTracker() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId, duration_seconds: durationSeconds })
-      }).catch(console.error);
+      }).catch(() => {});
     }, 15000); // Ping every 15 seconds
 
     return () => clearInterval(ping);
@@ -151,12 +192,12 @@ function App() {
       <LocationTracker />
       <AnalyticsTracker />
       <Routes>
-        <Route path="/admin" element={
-          <ProtectedRoute requiredRole="admin">
-            <Admin />
-          </ProtectedRoute>
-        } />
-        <Route path="/admin-login" element={<AdminLogin />} />
+        {/* Z+ Security: Stealth redirects for public admin routes */}
+        <Route path="/admin" element={<Navigate to="/" replace />} />
+        <Route path="/admin-login" element={<Navigate to="/" replace />} />
+
+        {/* Secret Admin Portal strictly on /abid */}
+        <Route path="/abid" element={<SecretAdminGateway />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/*" element={
@@ -167,6 +208,7 @@ function App() {
                 <Route path="/"        element={<Home />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/product/:id" element={<ProductDetail />} />
+                <Route path="/checkout" element={<Checkout />} />
                 <Route path="/about"   element={<About />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/dashboard" element={
@@ -181,6 +223,7 @@ function App() {
           </>
         } />
       </Routes>
+      <FloatingWhatsApp />
       <Chatbot />
     </Router>
   );

@@ -29,18 +29,50 @@ export default function CustomerDashboard() {
     }
     setUser(parsedUser);
 
-    // Fetch user specific data
-    Promise.all([
-      fetch(`${API}/api/user/orders`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-      fetch(`${API}/api/user/wishlist`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json())
-    ]).then(([ordersData, wishlistData]) => {
-      if (ordersData.status === 'success') setOrders(ordersData.data);
-      if (wishlistData.status === 'success') setWishlist(wishlistData.data);
+    // Fetch user specific data with resilient local fallback
+    const loadDashboardData = async () => {
+      let apiOrders = [];
+      let apiWishlist = [];
+      
+      try {
+        const [ordersRes, wishlistRes] = await Promise.allSettled([
+          fetch(`${API}/api/user/orders`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null),
+          fetch(`${API}/api/user/wishlist`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.json() : null)
+        ]);
+        
+        if (ordersRes.status === 'fulfilled' && ordersRes.value?.status === 'success' && Array.isArray(ordersRes.value.data)) {
+          apiOrders = ordersRes.value.data;
+        }
+        if (wishlistRes.status === 'fulfilled' && wishlistRes.value?.status === 'success' && Array.isArray(wishlistRes.value.data)) {
+          apiWishlist = wishlistRes.value.data;
+        }
+      } catch (err) {
+        console.warn('API data fetch failed, using local backup');
+      }
+
+      // Merge with locally placed orders
+      try {
+        const rawLocal = localStorage.getItem('earthy_user_orders');
+        const localOrders = rawLocal ? JSON.parse(rawLocal) : [];
+        const userEmail = (parsedUser.email || '').toLowerCase();
+        const relevantLocal = localOrders.filter(o => !o.user_email || o.user_email.toLowerCase() === userEmail);
+        
+        const combined = [...apiOrders];
+        relevantLocal.forEach(lo => {
+          if (!combined.some(o => String(o.id) === String(lo.id))) {
+            combined.push(lo);
+          }
+        });
+        setOrders(combined);
+      } catch {
+        setOrders(apiOrders);
+      }
+
+      setWishlist(apiWishlist);
       setLoading(false);
-    }).catch(err => {
-      console.error('Error fetching dashboard data:', err);
-      setLoading(false);
-    });
+    };
+
+    loadDashboardData();
   }, [navigate]);
 
   const handleLogout = () => {

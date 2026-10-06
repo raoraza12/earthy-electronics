@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { LockKeyhole, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import './Auth.css';
 
-const API = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
+import { loginAdmin } from '../utils/authService';
 
-export default function AdminLogin() {
+export default function AdminLogin({ onSuccess }) {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
@@ -19,27 +19,21 @@ export default function AdminLogin() {
     setError('');
     setLoading(true);
     
-    const submittedEmail = form.email.trim().toLowerCase();
-    
     try {
-      const res = await fetch(`${API}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+      const result = await loginAdmin({
+        email: form.email,
+        password: form.password
       });
-      const data = await res.json();
-      if (data.status === 'success') {
-        if (data.user.role !== 'admin') {
-          return setError('Access Denied. Admin privileges required.');
-        }
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        navigate('/admin');
+
+      if (result.success) {
+        window.dispatchEvent(new Event('authChange'));
+        if (onSuccess) onSuccess();
+        navigate('/abid');
       } else {
-        setError(data.message || 'Login failed');
+        setError(result.message || 'Access Denied. Invalid admin credentials.');
       }
     } catch {
-      setError('Network error or invalid credentials. Ensure backend is running.');
+      setError('An unexpected error occurred during authentication.');
     } finally {
       setLoading(false);
     }
@@ -58,7 +52,7 @@ export default function AdminLogin() {
           <AlertCircle size={18} className="inline-icon" /> {error}
         </div>}
 
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={handleSubmit} className="auth-form" autoComplete="off">
           <div className="auth-field">
             <label style={{ color: 'var(--primary-color)', fontWeight: '600' }}>Admin Email</label>
             <input
@@ -68,7 +62,9 @@ export default function AdminLogin() {
               value={form.email}
               onChange={handleChange}
               required
-              autoComplete="email"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck="false"
               style={{ border: '1px solid #cbd5e1' }}
             />
           </div>
@@ -83,7 +79,7 @@ export default function AdminLogin() {
                 value={form.password}
                 onChange={handleChange}
                 required
-                autoComplete="current-password"
+                autoComplete="new-password"
                 style={{ width: '100%', paddingRight: '40px', border: '1px solid #cbd5e1' }}
               />
               <button 

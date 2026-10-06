@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Zap, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import './Auth.css';
 
-const API = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
+import { registerUser } from '../utils/authService';
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -24,28 +24,24 @@ export default function SignUp() {
     if (form.password.length < 6) {
       return setError('Password must be at least 6 characters');
     }
-      setLoading(true);
-      try {
-        const res = await fetch(`${API}/api/auth/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: form.name, email: form.email, password: form.password }),
-        });
-        const data = await res.json();
-        
-        if (data.status === 'success') {
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
-          window.dispatchEvent(new Event('authChange'));
-          navigate('/');
-        } else {
-          setError(data.message || 'Registration failed. Please try again.');
-        }
-      } catch (err) {
-        setError('Network error. Ensure backend is running.');
-      } finally {
-        setLoading(false);
+    setLoading(true);
+    try {
+      const result = await registerUser({
+        name: form.name,
+        email: form.email,
+        password: form.password
+      });
+
+      if (result.success) {
+        navigate('/');
+      } else {
+        setError(result.message || 'Registration failed. Please try again.');
       }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

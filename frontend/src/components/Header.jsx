@@ -14,10 +14,13 @@ export default function Header() {
   
   // Checkout form states
   const [orderName, setOrderName] = useState('');
+  const [orderEmail, setOrderEmail] = useState('');
   const [orderPhone, setOrderPhone] = useState('');
   const [orderAddress, setOrderAddress] = useState('');
+  const [orderErrors, setOrderErrors] = useState({});
   const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [orderSuccessPopup, setOrderSuccessPopup] = useState(false);
+  const [placedOrderInfo, setPlacedOrderInfo] = useState(null);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -79,9 +82,22 @@ export default function Header() {
     return () => clearTimeout(timer);
   }, [cartCount]);
 
+  // Prefill order name and email if user is logged in
+  useEffect(() => {
+    if (authUser) {
+      if (!orderName && authUser.name) setOrderName(authUser.name);
+      if (!orderEmail && authUser.email) setOrderEmail(authUser.email);
+    }
+  }, [authUser]);
+
   // Listen for external open-cart events
   useEffect(() => {
-    const handleOpenCart = () => setCartOpen(true);
+    const handleOpenCart = (e) => {
+      setCartOpen(true);
+      if (e?.detail?.checkout) {
+        setCheckoutMode(true);
+      }
+    };
     window.addEventListener('open-cart', handleOpenCart);
     return () => window.removeEventListener('open-cart', handleOpenCart);
   }, []);
@@ -191,62 +207,198 @@ export default function Header() {
     }
   };
 
+  // Strict email and phone validation helpers
+  const validateEmail = (email) => {
+    if (!email || typeof email !== 'string') return false;
+    const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return re.test(email.trim());
+  };
+
+  const validatePhone = (phone) => {
+    if (!phone || typeof phone !== 'string') return false;
+    const clean = phone.trim().replace(/[\s\-\(\)]/g, '');
+    if (!/^\+?[0-9]{10,15}$/.test(clean)) return false;
+    if (clean.startsWith('03')) return /^03[0-9]{9}$/.test(clean);
+    if (clean.startsWith('+923')) return /^\+923[0-9]{9}$/.test(clean);
+    if (clean.startsWith('923')) return /^923[0-9]{9}$/.test(clean);
+    return clean.length >= 10 && clean.length <= 15;
+  };
+
   const handleCheckout = () => {
-    let text = "I want to place an order from EarthyElectronics:\n\n";
+    let text = "Hello EarthyElectronics! I want to place an order:\n\n";
+    if (orderName.trim()) text += `*Name:* ${orderName.trim()}\n`;
+    if (orderEmail.trim()) text += `*Email:* ${orderEmail.trim()}\n`;
+    if (orderPhone.trim()) text += `*Phone:* ${orderPhone.trim()}\n`;
+    if (orderAddress.trim()) text += `*Delivery Address:* ${orderAddress.trim()}\n\n`;
+    text += "*Items Ordered:*\n";
     cartItems.forEach(i => {
-      text += `- ${i.name} (${i.quantity}x) = Rs. ${((i.discountPrice || i.price) * i.quantity).toLocaleString()}\n`;
+      text += `- ${i.name} (Qty: ${i.quantity}) = Rs. ${((i.discountPrice || i.price) * i.quantity).toLocaleString()}\n`;
     });
-    text += `\n*Total: Rs. ${cartTotal.toLocaleString()}*`;
+    text += `\n*Total Amount: Rs. ${cartTotal.toLocaleString()}*`;
     window.open(`https://wa.me/923002347457?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
-    if (!orderName || !orderPhone || !orderAddress) return;
-    
-    // We are bypassing the login requirement for the local demo so the client can easily test EmailJS checkout
-    
+
+    // Strict validation: Email and Phone number are strictly compulsory and must be valid!
+    const errs = {};
+    if (!orderName.trim()) {
+      errs.name = 'Full name is required.';
+    }
+    if (!orderEmail.trim()) {
+      errs.email = 'Email address is compulsory / required.';
+    } else if (!validateEmail(orderEmail)) {
+      errs.email = 'Please enter a valid email address (e.g. name@gmail.com).';
+    }
+
+    if (!orderPhone.trim()) {
+      errs.phone = 'Phone number is compulsory / required.';
+    } else if (!validatePhone(orderPhone)) {
+      errs.phone = 'Please enter a valid phone number (e.g. 0300-1234567).';
+    }
+
+    if (!orderAddress.trim()) {
+      errs.address = 'Delivery address is required.';
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setOrderErrors(errs);
+      return;
+    }
+    setOrderErrors({});
+
     setOrderSubmitting(true);
     try {
+      const trimmedName = orderName.trim();
+      const trimmedEmail = orderEmail.trim().toLowerCase();
+      const trimmedPhone = orderPhone.trim();
+      const trimmedAddress = orderAddress.trim();
+      const orderNumber = 'EE-' + Math.floor(100000 + Math.random() * 900000);
+
       // Prepare the email text
       let itemsList = cartItems.map(i => `- ${i.name} (Qty: ${i.quantity}) - Rs. ${((i.discountPrice || i.price) * i.quantity).toLocaleString()}`).join('\n');
       
       const emailMessage = `
 NEW ORDER RECEIVED!
 --------------------------
-Customer Name: ${orderName}
-Phone Number: ${orderPhone}
-Address: ${orderAddress}
+Order #: ${orderNumber}
+Customer Name: ${trimmedName}
+Email: ${trimmedEmail}
+Phone Number: ${trimmedPhone}
+Delivery Address: ${trimmedAddress}
 
 ORDER DETAILS:
 ${itemsList}
 
 Total Amount: Rs. ${cartTotal.toLocaleString()}
+Payment Method: Cash on Delivery (COD)
 --------------------------
 `;
 
-      // Use EmailJS to send the email
-      await emailjs.send(
-        'service_5e6fcjm',    // Service ID
-        'template_2pedukm',   // Template ID
-        { message: emailMessage }, // Template Params
-        'ehutdzjr0maqm0s_U'   // Public Key
-      );
+      const orderRecord = {
+        id: 'EE-' + Date.now().toString().slice(-6),
+        order_number: orderNumber,
+        customer_name: trimmedName,
+        customer_email: trimmedEmail,
+        customer_phone: trimmedPhone,
+        customer_address: trimmedAddress,
+        items: cartItems.map(i => ({
+          id: i.id,
+          name: i.name,
+          quantity: i.quantity,
+          price: i.discountPrice || i.price,
+          image: i.image
+        })),
+        total: cartTotal,
+        status: 'Processing',
+        created_at: new Date().toISOString(),
+        user_email: trimmedEmail
+      };
+
+      // 1. Save to local storage for instant customer dashboard availability
+      try {
+        const rawLocal = localStorage.getItem('earthy_user_orders');
+        const existingLocal = rawLocal ? JSON.parse(rawLocal) : [];
+        existingLocal.unshift(orderRecord);
+        localStorage.setItem('earthy_user_orders', JSON.stringify(existingLocal));
+      } catch (storageErr) {
+        console.warn('Could not cache order locally:', storageErr);
+      }
+
+      // 2. Dispatch to backend API asynchronously (safely catches if backend offline)
+      try {
+        const base = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
+        const token = localStorage.getItem('token');
+        fetch(`${base}/api/orders`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({
+            customerName: trimmedName,
+            customer_name: trimmedName,
+            customerEmail: trimmedEmail,
+            customer_email: trimmedEmail,
+            email: trimmedEmail,
+            phone: trimmedPhone,
+            customer_phone: trimmedPhone,
+            address: trimmedAddress,
+            customer_address: trimmedAddress,
+            total: cartTotal,
+            items: orderRecord.items,
+            orderNumber: orderNumber
+          })
+        }).catch(() => {});
+      } catch {}
+
+      // 3. Use EmailJS to send the email
+      try {
+        await emailjs.send(
+          'service_5e6fcjm',    // Service ID
+          'template_2pedukm',   // Template ID
+          { 
+            message: emailMessage,
+            customer_name: trimmedName,
+            customer_email: trimmedEmail,
+            customer_phone: trimmedPhone,
+            customer_address: trimmedAddress,
+            order_total: `Rs. ${cartTotal.toLocaleString()}`,
+            order_number: orderNumber,
+            items_list: itemsList
+          },
+          'ehutdzjr0maqm0s_U'   // Public Key
+        );
+      } catch (emailErr) {
+        console.warn('EmailJS error:', emailErr);
+      }
+
+      setPlacedOrderInfo({
+        orderNumber,
+        customerName: trimmedName,
+        customerEmail: trimmedEmail,
+        customerPhone: trimmedPhone,
+        customerAddress: trimmedAddress,
+        total: cartTotal
+      });
 
       clearCart();
       setCartOpen(false);
       setCheckoutMode(false);
       setOrderName('');
+      setOrderEmail('');
       setOrderPhone('');
       setOrderAddress('');
-      // Show the beautiful success modal requested by the user
+      setOrderErrors({});
       setOrderSuccessPopup(true);
       
     } catch (err) {
       console.error(err);
       alert('Error placing order. Please check your internet connection and try again.');
+    } finally {
+      setOrderSubmitting(false);
     }
-    setOrderSubmitting(false);
   };
 
   return (
@@ -395,7 +547,7 @@ Total Amount: Rs. ${cartTotal.toLocaleString()}
                     <div className="user-dropdown-divider"/>
                     {authUser.role === 'admin' && (
                       <Link
-                        to="/admin"
+                        to="/abid"
                         className="user-dropdown-item admin-item"
                         onClick={() => setUserMenuOpen(false)}
                       >
@@ -479,41 +631,143 @@ Total Amount: Rs. ${cartTotal.toLocaleString()}
                 <button className="btn btn-navy" onClick={() => setCartOpen(false)} style={{ padding: '10px 24px', borderRadius: '8px' }}>Start Shopping</button>
               </div>
             ) : checkoutMode ? (
-              <form className="checkout-form" onSubmit={handlePlaceOrder} style={{ padding: '10px' }}>
-                <h4 style={{ marginBottom: '15px', color: '#065f46' }}>Delivery Details</h4>
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', marginBottom: '4px', fontWeight: 'bold' }}>Full Name *</label>
-                  <input type="text" required value={orderName} onChange={e => setOrderName(e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px' }} placeholder="John Doe" />
+              <form className="checkout-form" onSubmit={handlePlaceOrder} style={{ padding: '10px' }} noValidate>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', borderBottom: '1px solid #e2e8f0', paddingBottom: '8px' }}>
+                  <h4 style={{ margin: 0, color: '#065f46', fontSize: '15px', fontWeight: '700' }}>Delivery & Contact Details</h4>
+                  <span style={{ fontSize: '11px', color: '#475569', background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px', fontWeight: '600' }}>Guest Checkout</span>
                 </div>
+
+                {/* Error Banner */}
+                {Object.keys(orderErrors).length > 0 && (
+                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 12px', marginBottom: '12px', color: '#991b1b', fontSize: '12px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                    <span style={{ fontSize: '14px' }}>⚠️</span>
+                    <div>
+                      <strong>Please correct required fields:</strong>
+                      <div>Valid Email and Phone Number must be provided to place an order.</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Full Name */}
                 <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', marginBottom: '4px', fontWeight: 'bold' }}>Phone Number *</label>
-                  <input type="tel" required value={orderPhone} onChange={e => setOrderPhone(e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px' }} placeholder="03xx xxxxxxx" />
+                  <label style={{ display: 'block', fontSize: '13px', marginBottom: '4px', fontWeight: '600', color: '#1e293b' }}>
+                    Full Name <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <input 
+                    type="text" 
+                    value={orderName} 
+                    onChange={e => {
+                      setOrderName(e.target.value);
+                      if (orderErrors.name) setOrderErrors(prev => ({ ...prev, name: null }));
+                    }} 
+                    style={{ width: '100%', padding: '10px', border: orderErrors.name ? '1.5px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }} 
+                    placeholder="Muhammad Ahmed" 
+                  />
+                  {orderErrors.name && (
+                    <div style={{ color: '#dc2626', fontSize: '12px', marginTop: '3px', fontWeight: '500' }}>{orderErrors.name}</div>
+                  )}
                 </div>
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', marginBottom: '4px', fontWeight: 'bold' }}>Delivery Address *</label>
-                  <textarea required value={orderAddress} onChange={e => setOrderAddress(e.target.value)} rows="3" style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px' }} placeholder="House/Flat No, Street, Area, City" />
+
+                {/* Compulsory Email */}
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', marginBottom: '4px', fontWeight: '600', color: '#1e293b' }}>
+                    <span>Email Address <span style={{ color: '#ef4444', fontWeight: '700' }}>* (Compulsory)</span></span>
+                    <span style={{ fontSize: '11px', color: '#059669', fontWeight: '500' }}>Order invoice</span>
+                  </label>
+                  <input 
+                    type="email" 
+                    value={orderEmail} 
+                    onChange={e => {
+                      setOrderEmail(e.target.value);
+                      if (orderErrors.email) setOrderErrors(prev => ({ ...prev, email: null }));
+                    }} 
+                    style={{ width: '100%', padding: '10px', border: orderErrors.email ? '1.5px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }} 
+                    placeholder="name@example.com" 
+                  />
+                  {orderErrors.email ? (
+                    <div style={{ color: '#dc2626', fontSize: '12px', marginTop: '3px', fontWeight: '500' }}>⚠️ {orderErrors.email}</div>
+                  ) : (
+                    <div style={{ color: '#64748b', fontSize: '11px', marginTop: '2px' }}>Valid email required for confirmation.</div>
+                  )}
+                </div>
+
+                {/* Compulsory Phone */}
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', marginBottom: '4px', fontWeight: '600', color: '#1e293b' }}>
+                    <span>Phone Number <span style={{ color: '#ef4444', fontWeight: '700' }}>* (Compulsory)</span></span>
+                    <span style={{ fontSize: '11px', color: '#059669', fontWeight: '500' }}>Delivery call</span>
+                  </label>
+                  <input 
+                    type="tel" 
+                    value={orderPhone} 
+                    onChange={e => {
+                      setOrderPhone(e.target.value);
+                      if (orderErrors.phone) setOrderErrors(prev => ({ ...prev, phone: null }));
+                    }} 
+                    style={{ width: '100%', padding: '10px', border: orderErrors.phone ? '1.5px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }} 
+                    placeholder="0300-1234567" 
+                  />
+                  {orderErrors.phone ? (
+                    <div style={{ color: '#dc2626', fontSize: '12px', marginTop: '3px', fontWeight: '500' }}>⚠️ {orderErrors.phone}</div>
+                  ) : (
+                    <div style={{ color: '#64748b', fontSize: '11px', marginTop: '2px' }}>e.g. 03xx-xxxxxxx (11 digits).</div>
+                  )}
+                </div>
+
+                {/* Delivery Address */}
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', marginBottom: '4px', fontWeight: '600', color: '#1e293b' }}>
+                    Delivery Address <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <textarea 
+                    value={orderAddress} 
+                    onChange={e => {
+                      setOrderAddress(e.target.value);
+                      if (orderErrors.address) setOrderErrors(prev => ({ ...prev, address: null }));
+                    }} 
+                    rows="3" 
+                    style={{ width: '100%', padding: '10px', border: orderErrors.address ? '1.5px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }} 
+                    placeholder="House/Flat No, Street, Area, City" 
+                  />
+                  {orderErrors.address && (
+                    <div style={{ color: '#dc2626', fontSize: '12px', marginTop: '3px', fontWeight: '500' }}>{orderErrors.address}</div>
+                  )}
                 </div>
                 
-                <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
+                <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', marginBottom: '14px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px', color: '#475569' }}>
                     <span>Subtotal:</span>
                     <span>Rs. {cartTotal.toLocaleString()}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px', color: '#16a34a' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px', color: '#16a34a', fontWeight: '600' }}>
                     <span>Delivery:</span>
                     <span>Free</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #e2e8f0', paddingTop: '8px', fontWeight: 'bold', fontSize: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px', color: '#475569' }}>
+                    <span>Payment:</span>
+                    <span style={{ fontWeight: '600', color: '#0f172a' }}>Cash on Delivery</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #cbd5e1', paddingTop: '8px', fontWeight: '800', fontSize: '15px' }}>
                     <span>Total:</span>
-                    <span>Rs. {cartTotal.toLocaleString()}</span>
+                    <span style={{ color: '#059669' }}>Rs. {cartTotal.toLocaleString()}</span>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button type="button" onClick={() => setCheckoutMode(false)} className="btn btn-outline" style={{ flex: 1, justifyContent: 'center' }}>Back</button>
-                  <button type="submit" className="btn btn-green" disabled={orderSubmitting} style={{ flex: 2, justifyContent: 'center' }}>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                  <button type="button" onClick={() => setCheckoutMode(false)} className="btn btn-outline" style={{ flex: 1, justifyContent: 'center', fontSize: '13px' }}>Back</button>
+                  <button type="submit" className="btn btn-green" disabled={orderSubmitting} style={{ flex: 2, justifyContent: 'center', fontSize: '14px', fontWeight: '700' }}>
                     {orderSubmitting ? 'Placing Order...' : 'Confirm Order'}
                   </button>
+                </div>
+
+                <div style={{ textAlign: 'center', borderTop: '1px dashed #e2e8f0', paddingTop: '10px' }}>
+                  <Link 
+                    to="/checkout" 
+                    onClick={() => { setCartOpen(false); setCheckoutMode(false); }}
+                    style={{ fontSize: '12px', color: '#0284c7', textDecoration: 'none', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    Switch to Fullscreen Checkout Page →
+                  </Link>
                 </div>
               </form>
             ) : (
@@ -592,17 +846,42 @@ Total Amount: Rs. ${cartTotal.toLocaleString()}
       {/* ─── Success Order Popup Modal ─── */}
       {orderSuccessPopup && (
         <div className="menu-overlay is-open" style={{ zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setOrderSuccessPopup(false)}>
-          <div className="cart-panel" style={{ width: '90%', maxWidth: '400px', height: 'auto', borderRadius: '16px', padding: '30px 20px', textAlign: 'center', animation: 'scaleUp 0.3s ease-out' }} onClick={e => e.stopPropagation()}>
-            <div style={{ background: '#dcfce7', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto' }}>
-              <CheckCircle2 size={40} color="#16a34a" />
+          <div className="cart-panel" style={{ width: '90%', maxWidth: '440px', height: 'auto', borderRadius: '16px', padding: '28px 22px', textAlign: 'center', animation: 'scaleUp 0.3s ease-out' }} onClick={e => e.stopPropagation()}>
+            <div style={{ background: '#dcfce7', width: '70px', height: '70px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
+              <CheckCircle2 size={36} color="#16a34a" />
             </div>
-            <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#064e3b', marginBottom: '10px' }}>Order Confirmed!</h2>
-            <p style={{ color: '#475569', fontSize: '15px', lineHeight: '1.5', marginBottom: '25px' }}>
-              Thank you for choosing EarthyElectronics. Your order has been placed successfully and the admin has been notified. We will contact you shortly to confirm the delivery!
+            <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#064e3b', marginBottom: '6px' }}>Order Placed Successfully!</h2>
+            
+            {placedOrderInfo && (
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px 14px', margin: '14px 0 16px', textAlign: 'left', fontSize: '13px', lineHeight: '1.6' }}>
+                <div><span style={{ color: '#64748b' }}>Order #: </span><strong style={{ color: '#0f172a' }}>{placedOrderInfo.orderNumber}</strong></div>
+                <div><span style={{ color: '#64748b' }}>Customer: </span><strong>{placedOrderInfo.customerName}</strong></div>
+                <div><span style={{ color: '#64748b' }}>Email: </span><strong>{placedOrderInfo.customerEmail}</strong></div>
+                <div><span style={{ color: '#64748b' }}>Phone: </span><strong>{placedOrderInfo.customerPhone}</strong></div>
+                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '6px', marginTop: '6px' }}>
+                  <span style={{ color: '#64748b' }}>Total Amount: </span><strong style={{ color: '#059669', fontSize: '14px' }}>Rs. {placedOrderInfo.total.toLocaleString()} (COD)</strong>
+                </div>
+              </div>
+            )}
+
+            <p style={{ color: '#475569', fontSize: '13px', lineHeight: '1.5', marginBottom: '20px' }}>
+              A confirmation invoice has been sent to your email. Our delivery team will call you on your phone number before dispatching.
             </p>
-            <button className="btn btn-green" style={{ width: '100%', justifyContent: 'center', padding: '14px', fontSize: '16px' }} onClick={() => setOrderSuccessPopup(false)}>
-              Continue Shopping
-            </button>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <button className="btn btn-green" style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: '15px' }} onClick={() => setOrderSuccessPopup(false)}>
+                Continue Shopping
+              </button>
+              <a 
+                href={`https://wa.me/923002347457?text=${encodeURIComponent(`Hello EarthyElectronics, I placed order #${placedOrderInfo?.orderNumber || ''}. Can you please confirm?`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="cart-wa-checkout"
+                style={{ justifyContent: 'center', padding: '10px', fontSize: '13px' }}
+              >
+                <MessageCircle size={16} /> Track on WhatsApp
+              </a>
+            </div>
           </div>
         </div>
       )}

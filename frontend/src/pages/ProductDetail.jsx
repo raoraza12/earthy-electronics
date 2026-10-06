@@ -14,17 +14,6 @@ export default function ProductDetail() {
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const checkAuth = () => {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    if (!token || !user) {
-      alert("Please login first to place an order or add to cart.");
-      window.location.href = '/signin';
-      return false;
-    }
-    return true;
-  };
-
   const catFallback = (cat, name = '') => {
     const text = ((cat || '') + ' ' + (name || '')).toLowerCase();
     if (text.includes('washer') || text.includes('washing') || text.includes('hwm') || text.includes('dwt') || text.includes('dwf') || text.includes('tub') || text.includes('spin')) return '/images/cat_washer.png';
@@ -216,10 +205,8 @@ export default function ProductDetail() {
               <div className="product-detail-actions">
                 <button 
                   onClick={() => {
-                    if (checkAuth()) {
-                      addToCart(selectedVariant);
-                      window.dispatchEvent(new CustomEvent('open-cart'));
-                    }
+                    addToCart(selectedVariant);
+                    window.dispatchEvent(new CustomEvent('open-cart', { detail: { checkout: true } }));
                   }}
                   style={{ flex: 1, background: '#10b981', color: 'white', border: 'none', padding: '16px', borderRadius: '12px', fontSize: '16px', fontWeight: '700', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}
                 >
@@ -227,10 +214,8 @@ export default function ProductDetail() {
                 </button>
                 <button 
                   onClick={() => {
-                    if (checkAuth()) {
-                      addToCart(selectedVariant);
-                      alert('Added to cart!');
-                    }
+                    addToCart(selectedVariant);
+                    alert('Added to cart!');
                   }}
                   style={{ flex: 1, background: '#f1f5f9', color: '#0f172a', border: 'none', padding: '16px', borderRadius: '12px', fontSize: '16px', fontWeight: '700', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}
                 >
@@ -239,7 +224,7 @@ export default function ProductDetail() {
               </div>
 
               <a
-                href={`whatsapp://send?phone=923002347457&text=I want to order: ${encodeURIComponent(selectedVariant.name)} - Rs.${price.toLocaleString()}`}
+                href={`https://wa.me/923002347457?text=${encodeURIComponent(`I want to order: ${selectedVariant.name} - Rs.${price.toLocaleString()}`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ width: '100%', background: '#25D366', color: 'white', textDecoration: 'none', padding: '16px', borderRadius: '12px', fontSize: '16px', fontWeight: '700', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}

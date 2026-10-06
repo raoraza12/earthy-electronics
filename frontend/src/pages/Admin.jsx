@@ -11,7 +11,8 @@ import {
 import {
   LayoutDashboard, Package, ShoppingCart, Users, TrendingUp,
   CreditCard, LogOut, Menu, X, Bell, Settings, Plus, Pencil,
-  Trash2, AlertTriangle, Star, Zap, Banknote, Ticket, Image as ImageIcon, MapPin, Clock
+  Trash2, AlertTriangle, Star, Zap, Banknote, Ticket, Image as ImageIcon, MapPin, Clock,
+  ChevronDown, Check, Store
 } from 'lucide-react';
 import './Admin.css';
 
@@ -27,17 +28,29 @@ export default function AdminDashboard() {
     updateTheme("heroSlides", newSlides);
   };
 
-  const { inventory, updateStock } = useInventory();
+  const { inventory, updateStock, addProduct, deleteProduct, updateProduct } = useInventory();
   const { stats, barChart, pieChart, users: crmUsers, updateStats, updateBarChart, updatePieChart } = useCRM();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeView, setActiveView] = useState('dashboard');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = React.useRef(null);
   const [productForm, setProductForm] = useState(null);
   const [formErrors, setFormErrors] = useState({});
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [analytics, setAnalytics] = useState(null);
+
+  // Close profile dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target)) {
+        setShowProfileMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   
   // Use inventory from context instead of fetching from MySQL for the local demo
   const products = inventory || [];
@@ -46,13 +59,87 @@ export default function AdminDashboard() {
   const [installments, setInstallments] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Dynamic Product Reviews Moderation State
+  const [reviewFilter, setReviewFilter] = useState('all');
+  const [adminReviews, setAdminReviews] = useState(() => {
+    try {
+      const saved = localStorage.getItem('earthy_admin_reviews');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [
+      {
+        id: 1,
+        customer: 'Ali Raza',
+        product: 'Haier 1.5 Ton AC',
+        rating: 5,
+        review: 'Excellent cooling, very satisfied!',
+        status: 'pending',
+        date: '2026-10-05'
+      },
+      {
+        id: 2,
+        customer: 'Kamran',
+        product: 'Dawlance Refrigerator',
+        rating: 4,
+        review: 'Good product but delivery was late.',
+        status: 'pending',
+        date: '2026-10-04'
+      },
+      {
+        id: 3,
+        customer: 'Zubair Sheikh',
+        product: 'Gree 1.5 Ton Inverter AC',
+        rating: 5,
+        review: 'Super silent operation and very low electricity consumption.',
+        status: 'approved',
+        date: '2026-10-02'
+      },
+      {
+        id: 4,
+        customer: 'Tariq Mehmood',
+        product: 'Dawlance Automatic Washer',
+        rating: 5,
+        review: 'Great washing performance. Highly recommended.',
+        status: 'approved',
+        date: '2026-09-28'
+      }
+    ];
+  });
+
+  const handleApproveReview = (id) => {
+    setAdminReviews(prev => {
+      const updated = prev.map(r => r.id === id ? { ...r, status: 'approved' } : r);
+      localStorage.setItem('earthy_admin_reviews', JSON.stringify(updated));
+      return updated;
+    });
+    alert('Review has been approved and published to the live store!');
+  };
+
+  const handleRejectReview = (id) => {
+    setAdminReviews(prev => {
+      const updated = prev.map(r => r.id === id ? { ...r, status: 'rejected' } : r);
+      localStorage.setItem('earthy_admin_reviews', JSON.stringify(updated));
+      return updated;
+    });
+    alert('Review has been rejected / declined.');
+  };
+
+  const handleDeleteReview = (id) => {
+    if (!confirm('Are you sure you want to permanently delete this review?')) return;
+    setAdminReviews(prev => {
+      const updated = prev.filter(r => r.id !== id);
+      localStorage.setItem('earthy_admin_reviews', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const token = localStorage.getItem('token');
 
-  // Redirect if not admin
+  // Redirect if not admin - using secret route /abid
   useEffect(() => {
     if (!token || user.role !== 'admin') {
-      navigate('/admin-login');
+      navigate('/abid');
     }
   }, []);
 
@@ -98,8 +185,11 @@ export default function AdminDashboard() {
 
   const handleDeleteProduct = async (id) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
-    await authFetch(`${API}/api/admin/products/${id}`, { method: 'DELETE' });
-    setProducts(prev => prev.filter(p => p.id !== id));
+    try {
+      await authFetch(`${API}/api/admin/products/${id}`, { method: 'DELETE' });
+    } catch {}
+    deleteProduct(id);
+    alert('Product deleted successfully!');
   };
 
   const handleToggleUserStatus = async (userId, currentStatus, userRole) => {
@@ -209,15 +299,67 @@ export default function AdminDashboard() {
                 <AlertTriangle size={16}/> {lowStock.length}
               </div>
             )}
-            <div className="admin-user-chip" onClick={() => setShowProfileMenu(!showProfileMenu)} style={{ cursor: 'pointer', position: 'relative' }}>
+            <div 
+              ref={profileMenuRef}
+              className={`admin-user-chip ${showProfileMenu ? 'active' : ''}`} 
+              onClick={() => setShowProfileMenu(!showProfileMenu)} 
+              style={{ cursor: 'pointer', position: 'relative', userSelect: 'none' }}
+              title="Admin Menu"
+            >
               <div className="admin-user-avatar">{user.name?.[0] || 'A'}</div>
-              {user.name || 'Admin'}
+              <span style={{ fontWeight: '700', fontSize: '13px' }}>{user.name || 'Admin'}</span>
+              <ChevronDown size={14} style={{ transition: 'transform 0.2s', transform: showProfileMenu ? 'rotate(180deg)' : 'none', color: '#065f46' }} />
+              
               {showProfileMenu && (
-                <div style={{ position: 'absolute', top: '120%', right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', minWidth: '160px', zIndex: 1000, overflow: 'hidden' }}>
-                  <div style={{ padding: '10px 16px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc', color: '#64748b', fontSize: '12px', fontWeight: 600 }}>Signed in as<br/><strong style={{ color: '#0f172a' }}>{user.email || 'admin@earthy.pk'}</strong></div>
-                  <button onClick={(e) => { e.stopPropagation(); navigate('/'); }} style={{ width: '100%', padding: '12px 16px', textDecoration: 'none', color: '#334155', display: 'flex', alignItems: 'center', gap: '8px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', borderBottom: '1px solid #f1f5f9' }}><ShoppingCart size={16}/> Go to Store</button>
-                  <button onClick={(e) => { e.stopPropagation(); setActiveView('dashboard'); setShowProfileMenu(false); }} style={{ width: '100%', padding: '12px 16px', textDecoration: 'none', color: '#334155', display: 'flex', alignItems: 'center', gap: '8px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', borderBottom: '1px solid #f1f5f9' }}><LayoutDashboard size={16}/> Dashboard</button>
-                  <button onClick={(e) => { e.stopPropagation(); handleLogout(); }} style={{ width: '100%', padding: '12px 16px', textDecoration: 'none', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}><LogOut size={16}/> Logout</button>
+                <div 
+                  className="admin-dropdown-menu"
+                  style={{ 
+                    position: 'absolute', 
+                    top: 'calc(100% + 8px)', 
+                    right: 0, 
+                    background: '#ffffff', 
+                    border: '1px solid #e2e8f0', 
+                    borderRadius: '12px', 
+                    boxShadow: '0 12px 28px rgba(0,0,0,0.12)', 
+                    minWidth: '220px', 
+                    zIndex: 9999, 
+                    overflow: 'hidden',
+                    animation: 'scaleUp 0.15s ease-out'
+                  }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
+                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Signed in as</div>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email || 'admin@earthyelectronics.pk'}</div>
+                    <div style={{ display: 'inline-block', fontSize: '10px', background: '#dcfce7', color: '#166534', padding: '2px 6px', borderRadius: '4px', fontWeight: '700', marginTop: '4px' }}>SUPER ADMIN</div>
+                  </div>
+
+                  <button 
+                    onClick={() => { setShowProfileMenu(false); navigate('/'); }} 
+                    style={{ width: '100%', padding: '12px 16px', color: '#334155', display: 'flex', alignItems: 'center', gap: '10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '600', borderBottom: '1px solid #f8fafc', transition: 'background 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                  >
+                    <Store size={16} color="#059669" /> Go to Website / Store
+                  </button>
+
+                  <button 
+                    onClick={() => { setActiveView('dashboard'); setShowProfileMenu(false); }} 
+                    style={{ width: '100%', padding: '12px 16px', color: '#334155', display: 'flex', alignItems: 'center', gap: '10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '600', borderBottom: '1px solid #f8fafc', transition: 'background 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                  >
+                    <LayoutDashboard size={16} color="#6366f1" /> Admin Dashboard
+                  </button>
+
+                  <button 
+                    onClick={() => { setShowProfileMenu(false); handleLogout(); }} 
+                    style={{ width: '100%', padding: '12px 16px', color: '#dc2626', display: 'flex', alignItems: 'center', gap: '10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '700', transition: 'background 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#fee2e2'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                  >
+                    <LogOut size={16} color="#dc2626" /> Logout / Sign Out
+                  </button>
                 </div>
               )}
             </div>
@@ -487,9 +629,12 @@ export default function AdminDashboard() {
 
                               try {
                                 if (productForm.id) {
-                                  // Use context for frontend demo
+                                  updateProduct(productForm);
                                   updateStock(productForm.id, Number(productForm.stock || 0));
-                                  alert("Product stock updated successfully!");
+                                  alert("Product updated successfully!");
+                                } else {
+                                  addProduct(productForm);
+                                  alert("New product added successfully!");
                                 }
                                 setProductForm(null);
                               } catch (e) {
@@ -773,38 +918,161 @@ export default function AdminDashboard() {
                 </div>
               )}
 
-              {/* ⭐ REVIEWS VIEW (NEW) ⭐ */}
+              {/* ⭐ REVIEWS VIEW (DYNAMIC MODERATION) ⭐ */}
               {activeView === 'reviews' && (
                 <div>
-                  <div className="admin-view-header"><h3>Product Reviews Moderation</h3></div>
-                  <div className="table-responsive" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%' }}>
-                    <table className="admin-table">
-                      <thead>
-                        <tr><th>Customer</th><th>Product</th><th>Rating</th><th>Review</th><th>Action</th></tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td>Ali Raza</td><td>Haier 1.5 Ton AC</td><td><div style={{color: '#facc15'}}>★★★★★</div></td>
-                          <td style={{maxWidth: 250}}>Excellent cooling, very satisfied!</td>
-                          <td>
-                            <div style={{display: 'flex', gap: 5}}>
-                              <button className="action-btn edit" style={{background: '#10b981', color: 'white'}}>Approve</button>
-                              <button className="action-btn delete">Reject</button>
-                            </div>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>Kamran</td><td>Dawlance Refrigerator</td><td><div style={{color: '#facc15'}}>★★★★☆</div></td>
-                          <td style={{maxWidth: 250}}>Good product but delivery was late.</td>
-                          <td>
-                            <div style={{display: 'flex', gap: 5}}>
-                              <button className="action-btn edit" style={{background: '#10b981', color: 'white'}}>Approve</button>
-                              <button className="action-btn delete">Reject</button>
-                            </div>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+                  <div className="admin-view-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+                    <div>
+                      <h3 style={{ margin: 0 }}>Product Reviews Moderation</h3>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>
+                        Approve or decline customer reviews before they appear publicly.
+                      </p>
+                    </div>
+
+                    {/* Filter Pills */}
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {[
+                        { id: 'all', label: `All (${adminReviews.length})` },
+                        { id: 'pending', label: `Pending (${adminReviews.filter(r => r.status === 'pending').length})` },
+                        { id: 'approved', label: `Approved (${adminReviews.filter(r => r.status === 'approved').length})` },
+                        { id: 'rejected', label: `Rejected (${adminReviews.filter(r => r.status === 'rejected').length})` },
+                      ].map(tab => (
+                        <button
+                          key={tab.id}
+                          onClick={() => setReviewFilter(tab.id)}
+                          style={{
+                            padding: '6px 14px',
+                            borderRadius: '20px',
+                            border: reviewFilter === tab.id ? '2px solid #065f46' : '1px solid #cbd5e1',
+                            background: reviewFilter === tab.id ? '#ecfdf5' : '#ffffff',
+                            color: reviewFilter === tab.id ? '#065f46' : '#64748b',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s'
+                          }}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Summary Bar */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '20px' }}>
+                    <div style={{ background: '#ffffff', padding: '14px 18px', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                      <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600' }}>TOTAL REVIEWS</div>
+                      <div style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', marginTop: '2px' }}>{adminReviews.length}</div>
+                    </div>
+                    <div style={{ background: '#fffbeb', padding: '14px 18px', borderRadius: '10px', border: '1px solid #fef3c7', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                      <div style={{ fontSize: '12px', color: '#b45309', fontWeight: '600' }}>PENDING MODERATION</div>
+                      <div style={{ fontSize: '22px', fontWeight: '800', color: '#b45309', marginTop: '2px' }}>{adminReviews.filter(r => r.status === 'pending').length}</div>
+                    </div>
+                    <div style={{ background: '#f0fdf4', padding: '14px 18px', borderRadius: '10px', border: '1px solid #dcfce7', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                      <div style={{ fontSize: '12px', color: '#166534', fontWeight: '600' }}>APPROVED LIVE</div>
+                      <div style={{ fontSize: '22px', fontWeight: '800', color: '#166534', marginTop: '2px' }}>{adminReviews.filter(r => r.status === 'approved').length}</div>
+                    </div>
+                    <div style={{ background: '#fef2f2', padding: '14px 18px', borderRadius: '10px', border: '1px solid #fee2e2', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                      <div style={{ fontSize: '12px', color: '#991b1b', fontWeight: '600' }}>REJECTED</div>
+                      <div style={{ fontSize: '22px', fontWeight: '800', color: '#991b1b', marginTop: '2px' }}>{adminReviews.filter(r => r.status === 'rejected').length}</div>
+                    </div>
+                  </div>
+
+                  <div className="table-responsive" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', width: '100%', background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                    {adminReviews.filter(r => reviewFilter === 'all' || r.status === reviewFilter).length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '40px 20px', color: '#94a3b8' }}>
+                        <Star size={36} color="#cbd5e1" style={{ margin: '0 auto 8px' }} />
+                        <p style={{ margin: 0, fontSize: '14px' }}>No reviews found for "{reviewFilter}" filter.</p>
+                      </div>
+                    ) : (
+                      <table className="admin-table">
+                        <thead>
+                          <tr>
+                            <th>Customer</th>
+                            <th>Product</th>
+                            <th>Rating</th>
+                            <th>Review</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {adminReviews
+                            .filter(r => reviewFilter === 'all' || r.status === reviewFilter)
+                            .map(r => (
+                              <tr key={r.id}>
+                                <td>
+                                  <strong>{r.customer}</strong>
+                                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>{r.date || 'Recent'}</div>
+                                </td>
+                                <td>
+                                  <span style={{ fontWeight: '600', color: '#0f172a' }}>{r.product}</span>
+                                </td>
+                                <td>
+                                  <div style={{ color: '#f59e0b', fontSize: '14px', letterSpacing: '2px' }}>
+                                    {'★'.repeat(r.rating || 5)}{'☆'.repeat(5 - (r.rating || 5))}
+                                  </div>
+                                </td>
+                                <td style={{ maxWidth: 280, fontSize: '13px', color: '#334155', lineHeight: '1.4' }}>
+                                  "{r.review}"
+                                </td>
+                                <td>
+                                  {r.status === 'approved' && (
+                                    <span className="cat-badge" style={{ background: '#dcfce7', color: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: '700' }}>
+                                      <Check size={12} /> Approved
+                                    </span>
+                                  )}
+                                  {r.status === 'rejected' && (
+                                    <span className="cat-badge" style={{ background: '#fee2e2', color: '#dc2626', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: '700' }}>
+                                      <X size={12} /> Rejected
+                                    </span>
+                                  )}
+                                  {r.status === 'pending' && (
+                                    <span className="cat-badge" style={{ background: '#fef3c7', color: '#b45309', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: '700' }}>
+                                      <Clock size={12} /> Pending
+                                    </span>
+                                  )}
+                                </td>
+                                <td>
+                                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                    {r.status !== 'approved' && (
+                                      <button 
+                                        className="action-btn edit" 
+                                        onClick={() => handleApproveReview(r.id)}
+                                        style={{ background: '#10b981', color: 'white', display: 'inline-flex', alignItems: 'center', gap: '4px', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}
+                                        title="Approve this review"
+                                      >
+                                        <Check size={13} /> Approve
+                                      </button>
+                                    )}
+
+                                    {r.status !== 'rejected' && (
+                                      <button 
+                                        className="action-btn delete" 
+                                        onClick={() => handleRejectReview(r.id)}
+                                        style={{ background: '#ef4444', color: 'white', display: 'inline-flex', alignItems: 'center', gap: '4px', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}
+                                        title="Reject / Decline this review"
+                                      >
+                                        <X size={13} /> Reject
+                                      </button>
+                                    )}
+
+                                    <button 
+                                      onClick={() => handleDeleteReview(r.id)}
+                                      style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '6px', borderRadius: '4px' }}
+                                      title="Delete review"
+                                      onMouseEnter={e => e.currentTarget.style.color = '#dc2626'}
+                                      onMouseLeave={e => e.currentTarget.style.color = '#94a3b8'}
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
                 </div>
               )}

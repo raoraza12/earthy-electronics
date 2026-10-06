@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Zap, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import './Auth.css';
 
-const API = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
+import { loginUser } from '../utils/authService';
 
 export default function SignIn() {
   const navigate = useNavigate();
@@ -17,7 +17,7 @@ export default function SignIn() {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.ctrlKey && e.altKey && e.key === 'a') {
-        navigate('/admin-login');
+        navigate('/abid');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -31,25 +31,18 @@ export default function SignIn() {
     setError('');
     setLoading(true);
     try {
-      const res = await fetch(`${API}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+      const result = await loginUser({
+        email: form.email,
+        password: form.password
       });
-      const data = await res.json();
-      if (data.status === 'success') {
-        if (data.user.role === 'admin') {
-          return setError('Access denied. Please use the Admin portal.');
-        }
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        window.dispatchEvent(new Event('authChange'));
+
+      if (result.success) {
         navigate('/');
       } else {
-        setError(data.message || 'Invalid email or password.');
+        setError(result.message || 'Invalid email or password.');
       }
     } catch (err) {
-      setError('Login failed. Ensure backend is running.');
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -117,9 +110,6 @@ export default function SignIn() {
 
         <p className="auth-switch">
           Don't have an account? <Link to="/signup">Create Account</Link>
-        </p>
-        <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '11px', color: '#94a3b8' }}>
-          <Link to="/admin-login" style={{ color: '#94a3b8', textDecoration: 'none' }}>Admin? Click here</Link>
         </p>
       </div>
     </div>

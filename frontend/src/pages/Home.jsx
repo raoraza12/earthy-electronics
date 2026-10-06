@@ -27,19 +27,7 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, []);
 
-  const checkAuth = () => {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    if (!token || !user) {
-      alert("Please login first to place an order or add to cart.");
-      window.location.href = '/login';
-      return false;
-    }
-    return true;
-  };
-
   const handleAddToCart = (product) => {
-    if (!checkAuth()) return;
     addToCart(product);
     setAddedProductId(product.id);
     setTimeout(() => setAddedProductId(null), 1000);
