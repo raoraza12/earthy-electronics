@@ -26,6 +26,9 @@ export function InventoryProvider({ children }) {
         itemsArray = Array.isArray(localData) ? localData : localData.data || [];
       }
 
+      const brokenIds = new Set([471, 447, 507, 465, 760, 1001, 1002, 1003, 1004, 2001, 2002, 2003, 759]);
+      itemsArray = itemsArray.filter(p => !brokenIds.has(p.id));
+
       setInventory(itemsArray);
     } catch (error) {
       console.error("Failed to load products for inventory", error);

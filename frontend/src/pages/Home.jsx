@@ -67,8 +67,9 @@ export default function Home() {
       .then(r => r.json())
       .then(data => {
         if(data && Array.isArray(data.data)) {
+          const brokenIds = new Set([471, 447, 507, 465, 760, 1001, 1002, 1003, 1004, 2001, 2002, 2003, 759]);
           const validProducts = data.data.filter(p => {
-            if (p.id === 759) return false;
+            if (brokenIds.has(p.id)) return false;
             if (p.image && p.image.includes('GS-18FITH1W.webp')) return false;
             return true;
           });
@@ -265,12 +266,13 @@ export default function Home() {
                         </div>
                       )}
                       <img 
-                        src={p.image || ''} 
+                        src={p.image || catFallback(p.category, p.name)} 
                         alt={p.name} 
+                        referrerPolicy="no-referrer"
                         style={{ mixBlendMode: 'multiply' }}
                         onError={e => { 
-                          const card = e.target.closest('.deal-card');
-                          if (card) card.style.display = 'none'; 
+                          e.target.onerror = null;
+                          e.target.src = catFallback(p.category, p.name);
                         }}
                       />
                     </div>
@@ -353,11 +355,12 @@ export default function Home() {
                     <div className="prod-img-box" onClick={() => setSelectedProduct(p)} style={{cursor: 'pointer'}}>
                       {pct > 0 && <span className="prod-sale-badge">{pct}% OFF</span>}
                       <img
-                        src={p.image || ''}
+                        src={p.image || catFallback(p.category, p.name)}
                         alt={p.name}
+                        referrerPolicy="no-referrer"
                         onError={e => { 
-                          const card = e.target.closest('.prod-card');
-                          if (card) card.style.display = 'none'; 
+                          e.target.onerror = null;
+                          e.target.src = catFallback(p.category, p.name);
                         }}
                         style={{ mixBlendMode: 'multiply' }}
                       />
@@ -380,7 +383,7 @@ export default function Home() {
                         <button
                           className="btn btn-sm btn-orange"
                           style={{ flex: 1, justifyContent: 'center' }}
-                          onClick={(e) => { e.stopPropagation(); handleAddToCart(p); window.dispatchEvent(new CustomEvent('open-cart')); }}
+                          onClick={(e) => { e.stopPropagation(); handleAddToCart(p); window.dispatchEvent(new CustomEvent('open-cart', { detail: { checkout: true } })); }}
                         >
                           Order Now
                         </button>

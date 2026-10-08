@@ -120,7 +120,12 @@ export default function Header() {
     const base = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
     fetch(`/data/products.json`)
       .then(r => r.json())
-      .then(data => { if (data.status === 'success') setAllProducts(data.data); })
+      .then(data => {
+        if (data.status === 'success') {
+          const brokenIds = new Set([471, 447, 507, 465, 760, 1001, 1002, 1003, 1004, 2001, 2002, 2003, 759]);
+          setAllProducts(data.data.filter(p => !brokenIds.has(p.id)));
+        }
+      })
       .catch(() => {});
   }, []);
 

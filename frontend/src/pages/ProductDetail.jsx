@@ -33,12 +33,15 @@ export default function ProductDetail() {
       .then(r => r.json())
       .then(data => {
         if (data.status === 'success') {
+          const brokenIds = new Set([471, 447, 507, 465, 760, 1001, 1002, 1003, 1004, 2001, 2002, 2003, 759]);
+          const activeProducts = data.data.filter(p => !brokenIds.has(p.id));
+
           // Find the group containing the exact product variant id in the URL
           const targetId = parseInt(id);
           
           // Grouping logic (same as Products.jsx)
           const map = new Map();
-          data.data.forEach(p => {
+          activeProducts.forEach(p => {
             let baseKey;
             if (p.group_id) {
               baseKey = p.group_id;
@@ -97,11 +100,12 @@ export default function ProductDetail() {
       <div className="product-detail-layout">
         <div className="product-detail-image-box" data-aos="fade-right">
           <img 
-            src={selectedVariant.image || productGroup.variants.find(v=>v.image)?.image || ''} 
+            src={selectedVariant.image || productGroup.variants.find(v=>v.image)?.image || catFallback(selectedVariant.category)} 
             alt={selectedVariant.name}
+            referrerPolicy="no-referrer"
             onError={e => { 
-              const card = e.target.closest('.product-detail-image-box');
-              if (card) card.style.display = 'none'; 
+              e.target.onerror = null;
+              e.target.src = catFallback(selectedVariant.category);
             }}
             style={{ width: '100%', maxWidth: '400px', height: 'auto', objectFit: 'contain' }}
           />

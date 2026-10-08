@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ShoppingCart, MessageCircle, X, Search, Star, Settings2, LayoutGrid, Wind, Tv, Refrigerator, Shirt, ChefHat, Microwave, Droplets, Snowflake, Check, Scale, ChevronDown, ChevronUp, PackageOpen } from 'lucide-react';
+import { ShoppingCart, MessageCircle, X, Search, Star, Settings2, LayoutGrid, Wind, Tv, Refrigerator, Shirt, ChefHat, Microwave, Droplets, Snowflake, Check, Scale, ChevronDown, ChevronUp, PackageOpen, Zap } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useInventory } from '../context/InventoryContext';
 import './Products.css';
@@ -8,6 +8,7 @@ import './Products.css';
 
 const ProductCardItem = ({ group, addToCart, handleSelectProduct, catFallback, idx, compareList, toggleCompare }) => {
   const [selectedVariant, setSelectedVariant] = useState(group.variants[0]);
+  const [added, setAdded] = useState(false);
   
   useEffect(() => {
      const withImg = group.variants.find(v => v.image);
@@ -16,71 +17,123 @@ const ProductCardItem = ({ group, addToCart, handleSelectProduct, catFallback, i
 
   const price = selectedVariant.discountPrice || selectedVariant.price;
   const saved = selectedVariant.discountPrice ? selectedVariant.price - selectedVariant.discountPrice : 0;
+  const pct = selectedVariant.discountPrice ? Math.round((1 - selectedVariant.discountPrice / selectedVariant.price) * 100) : 0;
+  
   const { inventory } = useInventory();
   const invItem = inventory.find(i => String(i.id) === String(selectedVariant.id));
   const stock = invItem ? invItem.stock : (selectedVariant.stock || 0);
   const isOutOfStock = stock <= 0;
+
+  const isCompared = !!compareList.find(p => p.id === group.id);
+
+  const handleCartClick = (e) => {
+    e.stopPropagation();
+    addToCart(selectedVariant);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
+  };
+
+  const handleOrderNowClick = (e) => {
+    e.stopPropagation();
+    addToCart(selectedVariant);
+    window.dispatchEvent(new CustomEvent('open-cart', { detail: { checkout: true } }));
+  };
   
   return (
-    <div className="catalog-card" onClick={() => !isOutOfStock && handleSelectProduct(group, selectedVariant)} style={{ cursor: isOutOfStock ? 'not-allowed' : 'pointer', position: 'relative', opacity: isOutOfStock ? 0.6 : 1 }} data-aos="fade-up" data-aos-delay={(idx % 20) * 50}>
-      {isOutOfStock ? <span className="catalog-badge" style={{background: "#ef4444"}}>OUT OF STOCK</span> : (saved > 0 && <span className="catalog-badge">SAVE Rs.{saved.toLocaleString()}</span>)}
+    <div 
+      className="catalog-card" 
+      onClick={() => !isOutOfStock && handleSelectProduct(group, selectedVariant)} 
+      style={{ cursor: isOutOfStock ? 'not-allowed' : 'pointer', opacity: isOutOfStock ? 0.65 : 1 }} 
+    >
+      {/* Top Badges */}
+      <div className="catalog-badge-cluster">
+        {isOutOfStock ? (
+          <span className="catalog-pill-badge badge-out">Out of Stock</span>
+        ) : (
+          saved > 0 && (
+            <span className="catalog-pill-badge badge-save">
+              SAVE Rs.{saved.toLocaleString()}
+            </span>
+          )
+        )}
+        {group.variants.length > 1 && (
+          <span className="catalog-pill-badge badge-variants">
+            +{group.variants.length - 1} Variants
+          </span>
+        )}
+      </div>
+
+      {/* Image Wrap */}
       <div className="catalog-img-wrap">
         <img
-          src={selectedVariant.image || group.variants.find(v=>v.image)?.image || ''}
+          src={selectedVariant.image || group.variants.find(v => v.image)?.image || catFallback(selectedVariant.category, selectedVariant.name)}
           alt={selectedVariant.name}
           loading="lazy"
           decoding="async"
+          referrerPolicy="no-referrer"
           onError={e => { 
-            const card = e.target.closest('.catalog-card');
-            if (card) card.style.display = 'none'; 
+            e.target.onerror = null;
+            e.target.src = catFallback(selectedVariant.category, selectedVariant.name);
           }}
-          style={{ mixBlendMode: 'multiply' }}
         />
       </div>
+
+      {/* Card Body */}
       <div className="catalog-body">
-        <div className="catalog-brand">{selectedVariant.brand}</div>
-        <div className="catalog-name">{selectedVariant.name}</div>
-        {group.variants.length > 1 && (
-          <div style={{fontSize:'12px', color:'#10b981', fontWeight:'700', marginTop:'4px'}}>+{group.variants.length - 1} Options Available</div>
-        )}
-        
+        <div className="catalog-brand-label">{selectedVariant.brand}</div>
+        <h3 className="catalog-name-title" title={selectedVariant.name}>
+          {selectedVariant.name}
+        </h3>
 
-
-        <div className="catalog-price" style={{ marginTop: group.variants.length > 1 ? '6px' : 'auto' }}>
-          <span className="now">Rs. {price.toLocaleString()}</span>
-          {selectedVariant.discountPrice && <span className="was">Rs. {selectedVariant.price.toLocaleString()}</span>}
+        {/* Price Row */}
+        <div className="catalog-price-container">
+          <span className="price-now">Rs. {price.toLocaleString()}</span>
+          {selectedVariant.discountPrice && (
+            <span className="price-was">Rs. {selectedVariant.price.toLocaleString()}</span>
+          )}
+          {pct > 0 && (
+            <span className="discount-chip">{pct}% OFF</span>
+          )}
         </div>
-        <label 
-          className="compare-checkbox-wrap" 
+
+        {/* Compare Toggle Bar */}
+        <div 
+          className={`compare-chip-btn ${isCompared ? 'checked' : ''}`}
           onClick={(e) => { e.stopPropagation(); toggleCompare(group, selectedVariant); }}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#64748b', marginBottom: '12px', cursor: 'pointer' }}
+          title="Compare this product"
         >
-          <input 
-            type="checkbox" 
-            checked={!!compareList.find(p => p.id === group.id)} 
-            readOnly 
-            style={{ cursor: 'pointer', accentColor: '#10b981' }}
-          />
-          <span style={{ fontWeight: 600 }}>Add to Compare</span>
-        </label>
-        <div className="catalog-actions">
-          <button className="btn btn-navy catalog-cart-btn" style={{ padding: '8px 10px', fontSize: '12px' }} onClick={(e) => {
-            e.stopPropagation();
-            addToCart(selectedVariant);
-            alert('Added to cart!');
-          }}>
-            <ShoppingCart size={14}/> Add to Cart
-          </button>
-          <button
-            className="btn btn-primary catalog-order-btn"
-            style={{ padding: '8px 10px', fontSize: '12px' }}
-            onClick={(e) => {
-              e.stopPropagation();
-              addToCart(selectedVariant);
-              window.dispatchEvent(new CustomEvent('open-cart', { detail: { checkout: true } }));
-            }}
+          <div className="custom-check-box">
+            {isCompared && <Check size={11} strokeWidth={3.5} />}
+          </div>
+          <span>Add to Compare</span>
+        </div>
+
+        {/* Action Buttons: Equal bottom alignment */}
+        <div className="catalog-actions-row">
+          <button 
+            type="button"
+            className={`card-btn-action btn-add-cart ${added ? 'btn-is-added' : ''}`}
+            onClick={handleCartClick}
+            disabled={isOutOfStock}
           >
-            Order Now
+            {added ? (
+              <>
+                <Check size={14} strokeWidth={2.5} /> Added
+              </>
+            ) : (
+              <>
+                <ShoppingCart size={14} /> Add to Cart
+              </>
+            )}
+          </button>
+          
+          <button
+            type="button"
+            className="card-btn-action btn-order-instant"
+            onClick={handleOrderNowClick}
+            disabled={isOutOfStock}
+          >
+            <Zap size={14} fill="#ffffff" /> Order Now
           </button>
         </div>
       </div>
@@ -194,8 +247,9 @@ export default function Products() {
       .then(res => res.json())
       .then(data => {
         if (data && Array.isArray(data.data)) {
+          const brokenIds = new Set([471, 447, 507, 465, 760, 1001, 1002, 1003, 1004, 2001, 2002, 2003, 759]);
           const validProducts = data.data.filter(p => {
-            if (p.id === 759) return false;
+            if (brokenIds.has(p.id)) return false;
             if (p.image && p.image.includes('GS-18FITH1W.webp')) return false;
             return true;
           });
