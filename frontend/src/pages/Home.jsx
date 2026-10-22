@@ -3,12 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, MessageCircle, ArrowRight, ChevronLeft, ChevronRight, Award, Truck, ShieldCheck, PhoneCall, Flame, Zap, Banknote, Wind, Tv, Refrigerator, Shirt, ChefHat, Microwave, Droplets, Snowflake, Sparkles } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
+import { useInventory } from '../context/InventoryContext';
 import ProductModal from '../components/ProductModal';
 import './Home.css';
 
 export default function Home() {
   const { addToCart } = useCart();
   const { themeConfig } = useTheme();
+  const { inventory } = useInventory();
   const navigate = useNavigate();
 
   const [products, setProducts] = useState([]);
@@ -62,23 +64,23 @@ export default function Home() {
   }, [heroSlides.length]);
 
   useEffect(() => {
-    const base = import.meta.env.VITE_API_BASE || 'http://localhost:5000';
-    fetch(`/data/products.json`)
-      .then(r => r.json())
-      .then(data => {
-        if(data && Array.isArray(data.data)) {
-          const brokenIds = new Set([471, 447, 507, 465, 760, 1001, 1002, 1003, 1004, 2001, 2002, 2003, 759]);
-          const validProducts = data.data.filter(p => {
-            if (brokenIds.has(p.id)) return false;
-            if (p.image && p.image.includes('GS-18FITH1W.webp')) return false;
-            return true;
-          });
-          setProducts(validProducts);
-        }
-        setLoading(false);
-      })
-      .catch(err => { console.error(err); setLoading(false); });
-  }, []);
+    if (inventory && inventory.length > 0) {
+      setProducts(inventory);
+      setLoading(false);
+    } else {
+      fetch(`/data/products.json`)
+        .then(r => r.json())
+        .then(data => {
+          if (data && Array.isArray(data.data)) {
+            const brokenIds = new Set([471, 447, 507, 465, 760, 1001, 1002, 1003, 1004, 2001, 2002, 2003, 759]);
+            const validProducts = data.data.filter(p => !brokenIds.has(p.id));
+            setProducts(validProducts);
+          }
+          setLoading(false);
+        })
+        .catch(err => { console.error(err); setLoading(false); });
+    }
+  }, [inventory]);
 
   const categories = [
     { img: '/images/cat_ac.png',        icon: <Wind size={24} color="#0284c7" />,        bgColor: '#e0f2fe', name: 'Air Conditioners', desc: 'DC Inverter & Non-Inverter', cat: 'Air Conditioners' },

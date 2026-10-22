@@ -35,8 +35,9 @@ app.use(cors({
   credentials: true,
 }));
 
-// Body size limit (prevent large payload attacks)
-app.use(express.json({ limit: '10kb' }));
+// Body size limit (allows product image uploads and larger payloads)
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ limit: '15mb', extended: true }));
 
 // Global rate limiter: 5000 requests per 15 minutes
 const globalLimiter = rateLimit({
